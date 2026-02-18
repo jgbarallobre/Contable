@@ -768,7 +768,7 @@ BEGIN
     
     SELECT 
         ROW_NUMBER() OVER (ORDER BY DocumentDate) AS RowNumber,
-        CONVERT(VARCHAR, DocumentDate, 'dd/MM/yyyy') AS DocumentDate,
+        CONVERT(VARCHAR, DocumentDate, 103) AS DocumentDate,
         DocumentNumber,
         ControlNumber,
         SupplierRIF,
@@ -804,7 +804,7 @@ BEGIN
     
     SELECT 
         ROW_NUMBER() OVER (ORDER BY DocumentDate) AS RowNumber,
-        CONVERT(VARCHAR, DocumentDate, 'dd/MM/yyyy') AS DocumentDate,
+        CONVERT(VARCHAR, DocumentDate, 103) AS DocumentDate,
         DocumentNumber,
         ControlNumber,
         CustomerRIF,
@@ -873,7 +873,7 @@ BEGIN
         h.EntryId,
         h.EntryNumber,
         h.EntryType,
-        CONVERT(VARCHAR, h.EntryDate, 'dd/MM/yyyy') AS EntryDate,
+        CONVERT(VARCHAR, h.EntryDate, 103) AS EntryDate,
         h.Description,
         h.Reference,
         h.Status,
