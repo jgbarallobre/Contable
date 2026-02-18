@@ -49,10 +49,20 @@ export async function POST(request: NextRequest) {
         Token: token,
       },
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Login error:', error);
+    const err = error as Error & { message?: string };
+    // Proporcionar mensaje de error más detallado
+    let errorMessage = 'Error interno del servidor';
+    if (err.message?.includes('connection')) {
+      errorMessage = 'Error de conexión a la base de datos. Verifica tu archivo .env.local';
+    } else if (err.message?.includes('login')) {
+      errorMessage = 'Error de autenticación en SQL Server. Verifica el usuario y contraseña';
+    } else if (err.message?.includes('database')) {
+      errorMessage = 'La base de datos no existe o no se puede acceder';
+    }
     return NextResponse.json(
-      { Success: false, Message: 'Error interno del servidor' },
+      { Success: false, Message: errorMessage },
       { status: 500 }
     );
   }
