@@ -115,16 +115,16 @@ export async function closeDb(): Promise<void> {
   }
 }
 
-// SQL types for reference
+// SQL types for reference - lazy initialization to avoid undefined errors
 export const SQL_TYPES = {
-  INT: sql.Int,
-  VARCHAR: sql.VarChar,
-  NVARCHAR: sql.NVarChar,
-  DECIMAL: sql.Decimal,
-  DATETIME2: sql.DateTime2,
-  DATE: sql.Date,
-  BIT: sql.Bit,
-  BIGINT: sql.BigInt,
-  TEXT: sql.Text,
-  JSON: sql.NVarChar(sql.MAX),
+  get INT() { return sql.Int; },
+  get VARCHAR() { return sql.VarChar; },
+  get NVARCHAR() { return sql.NVarChar; },
+  get DECIMAL() { return sql.Decimal; },
+  get DATETIME2() { return sql.DateTime2; },
+  get DATE() { return sql.Date; },
+  get BIT() { return sql.Bit; },
+  get BIGINT() { return sql.BigInt; },
+  get TEXT() { return sql.Text; },
+  get JSON() { return sql.NVarChar(sql.MAX); },
 };
