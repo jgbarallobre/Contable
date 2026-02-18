@@ -99,7 +99,7 @@ CREATE TABLE Roles (
     UpdatedAt DATETIME2,
     UpdatedBy INT,
     RowVersion ROWVERSION,
-    FOREIGN KEY (CompanyId) REFERENCES Companies(CompanyId) ON DELETE CASCADE
+    FOREIGN KEY (CompanyId) REFERENCES Companies(CompanyId) ON DELETE SET NULL
 );
 
 -- Tabla de Permisos
@@ -136,7 +136,7 @@ CREATE TABLE UserCompanies (
     CreatedBy INT,
     FOREIGN KEY (UserId) REFERENCES Users(UserId) ON DELETE CASCADE,
     FOREIGN KEY (CompanyId) REFERENCES Companies(CompanyId) ON DELETE CASCADE,
-    FOREIGN KEY (RoleId) REFERENCES Roles(RoleId) ON DELETE CASCADE,
+    FOREIGN KEY (RoleId) REFERENCES Roles(RoleId) ON DELETE NO ACTION,
     FOREIGN KEY (CreatedBy) REFERENCES Users(UserId),
     UNIQUE(UserId, CompanyId)
 );
