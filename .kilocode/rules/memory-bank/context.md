@@ -17,6 +17,7 @@ El proyecto es un sistema completo de contabilidad para Venezuela con SQL Server
 - [x] Sistema de autenticación JWT con bcrypt
 - [x] Sistema de permisos RBAC
 - [x] Documentación completa (README.md)
+- [x] Fix FK cascade cycles en schema.sql (UserCompanies, Roles)
 
 ## Current Structure
 
@@ -101,4 +102,5 @@ El proyecto es un sistema completo de contabilidad para Venezuela con SQL Server
 
 | Date | Changes |
 |------|---------|
+| 2026-02-18 | Fix FK cascade cycles en schema.sql |
 | 2024-02-18 | Sistema Contable Venezuela - Versión inicial completa |

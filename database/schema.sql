@@ -5,6 +5,30 @@
 -- ============================================================
 
 -- ============================================================
+-- 0. CREACIÓN DE LA BASE DE DATOS
+-- ============================================================
+
+-- Usar master para crear la base de datos
+USE master;
+GO
+
+-- Crear la base de datos si no existe
+IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = 'ContabilidadVE')
+BEGIN
+    CREATE DATABASE ContabilidadVE;
+    PRINT 'Base de datos ContabilidadVE creada exitosamente';
+END
+ELSE
+BEGIN
+    PRINT 'La base de datos ContabilidadVE ya existe';
+END
+GO
+
+-- Cambiar a la base de datos ContabilidadVE
+USE ContabilidadVE;
+GO
+
+-- ============================================================
 -- 1. ESQUEMA DE SEGURIDAD Y AUTENTICACIÓN
 -- ============================================================
 
@@ -594,6 +618,7 @@ BEGIN
     GROUP BY c.CompanyId, c.AccountCode, c.AccountName, c.Nature, c.AccountType, c.AccountLevel
     ORDER BY c.AccountCode;
 END;
+GO
 
 -- Mayor General por Cuenta
 IF OBJECT_ID('sp_GetGeneralLedger', 'P') IS NOT NULL
@@ -609,6 +634,17 @@ AS
 BEGIN
     SET NOCOUNT ON;
     
+    -- Calcular saldo inicial
+    DECLARE @InitialBalance DECIMAL(18,2);
+    SELECT @InitialBalance = ISNULL(SUM(d.Debit) - SUM(d.Credit), 0)
+    FROM JournalEntryLines d
+    INNER JOIN JournalEntryHeaders h ON d.EntryId = h.EntryId
+    WHERE h.CompanyId = @CompanyId 
+        AND d.AccountId = @AccountId
+        AND h.EntryDate < @DateFrom
+        AND h.Status = 'APPROVED';
+    
+    -- Obtener movimientos del período
     SELECT 
         h.EntryId,
         h.EntryNumber,
@@ -619,11 +655,7 @@ BEGIN
         ISNULL(t.LegalName, '-') AS ThirdPartyName,
         d.Debit,
         d.Credit,
-        (SELECT SUM(Debit) - SUM(Credit) 
-         FROM JournalEntryLines 
-         WHERE AccountId = @AccountId 
-         AND EntryId IN (SELECT EntryId FROM JournalEntryHeaders WHERE EntryDate < @DateFrom)) 
-         + SUM(d.Debit) - SUM(d.Credit) OVER (ORDER BY h.EntryDate, d.LineNumber) AS RunningBalance,
+        @InitialBalance + SUM(d.Debit - d.Credit) OVER (ORDER BY h.EntryDate, h.EntryNumber, d.LineNumber) AS RunningBalance,
         h.Status,
         u.Username AS CreatedBy
     FROM JournalEntryLines d
@@ -637,6 +669,7 @@ BEGIN
         AND (@ThirdPartyId IS NULL OR d.ThirdPartyId = @ThirdPartyId)
     ORDER BY h.EntryDate, h.EntryNumber, d.LineNumber;
 END;
+GO
 
 -- Estado de Resultados
 IF OBJECT_ID('sp_GetIncomeStatement', 'P') IS NOT NULL
@@ -688,6 +721,7 @@ BEGIN
     
     ORDER BY AccountCode;
 END;
+GO
 
 -- Balance General
 IF OBJECT_ID('sp_GetBalanceSheet', 'P') IS NOT NULL
@@ -754,6 +788,7 @@ BEGIN
     
     ORDER BY AccountCode;
 END;
+GO
 
 -- Libro de Compras IVA
 IF OBJECT_ID('sp_GetPurchaseBook', 'P') IS NOT NULL
@@ -790,6 +825,7 @@ BEGIN
         AND PeriodId = @PeriodId
     ORDER BY DocumentDate;
 END;
+GO
 
 -- Libro de Ventas IVA
 IF OBJECT_ID('sp_GetSalesBook', 'P') IS NOT NULL
@@ -825,6 +861,7 @@ BEGIN
         AND PeriodId = @PeriodId
     ORDER BY DocumentDate;
 END;
+GO
 
 -- Reporte de IGTF
 IF OBJECT_ID('sp_GetIGTFReport', 'P') IS NOT NULL
@@ -856,6 +893,7 @@ BEGIN
         AND h.Status = 'APPROVED'
     ORDER BY h.EntryDate;
 END;
+GO
 
 -- Diario General
 IF OBJECT_ID('sp_GetGeneralJournal', 'P') IS NOT NULL
@@ -893,6 +931,7 @@ BEGIN
         AND h.EntryDate BETWEEN @DateFrom AND @DateTo
     ORDER BY h.EntryDate, h.EntryNumber, d.LineNumber;
 END;
+GO
 
 PRINT '===============================================';
 PRINT 'Base de datos SQL Server configurada exitosamente';
