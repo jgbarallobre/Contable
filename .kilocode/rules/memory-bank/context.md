@@ -1,87 +1,104 @@
-# Active Context: Next.js Starter Template
+# Active Context: Sistema Contable Venezuela
 
 ## Current State
 
-**Template Status**: ✅ Ready for development
+**Project Status**: ✅ Sistema Contable Venezuela - Multiempresa/Multiusuario
 
-The template is a clean Next.js 16 starter with TypeScript and Tailwind CSS 4. It's ready for AI-assisted expansion to build any type of application.
+El proyecto es un sistema completo de contabilidad para Venezuela con SQL Server como base de datos.
 
 ## Recently Completed
 
-- [x] Base Next.js 16 setup with App Router
-- [x] TypeScript configuration with strict mode
-- [x] Tailwind CSS 4 integration
-- [x] ESLint configuration
-- [x] Memory bank documentation
-- [x] Recipe system for common features
+- [x] Base de datos SQL Server con 18 tablas
+- [x] Procedimientos almacenados para reportes (9)
+- [x] API Routes para autenticación
+- [x] API Routes para CRUD de empresas, cuentas, asientos, terceros, períodos
+- [x] API Routes para reportes financieros y fiscales
+- [x] Frontend dashboard con navegación a todos los módulos
+- [x] Sistema de autenticación JWT con bcrypt
+- [x] Sistema de permisos RBAC
+- [x] Documentación completa (README.md)
 
 ## Current Structure
 
-| File/Directory | Purpose | Status |
-|----------------|---------|--------|
-| `src/app/page.tsx` | Home page | ✅ Ready |
-| `src/app/layout.tsx` | Root layout | ✅ Ready |
-| `src/app/globals.css` | Global styles | ✅ Ready |
-| `.kilocode/` | AI context & recipes | ✅ Ready |
+| Component | Purpose | Status |
+|-----------|---------|--------|
+| `database/schema.sql` | SQL Server schema con tablas, índices, procedimientos | ✅ |
+| `src/lib/db/connection.ts` | Conexión a SQL Server | ✅ |
+| `src/lib/auth.ts` | Autenticación JWT + bcrypt | ✅ |
+| `src/lib/types.ts` | Tipos TypeScript | ✅ |
+| `src/app/api/auth/` | Endpoints de autenticación | ✅ |
+| `src/app/api/companies/` | CRUD Empresas | ✅ |
+| `src/app/api/accounts/` | Plan de Cuentas | ✅ |
+| `src/app/api/journal/` | Asientos Contables | ✅ |
+| `src/app/api/third-parties/` | Terceros | ✅ |
+| `src/app/api/periods/` | Períodos Contables | ✅ |
+| `src/app/api/reports/` | Reportes | ✅ |
+| `src/app/page.tsx` | Dashboard Frontend | ✅ |
 
-## Current Focus
+## Tech Stack
 
-The template is ready. Next steps depend on user requirements:
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| Next.js | 16.x | Framework |
+| React | 19.x | UI Library |
+| TypeScript | 5.9.x | Type Safety |
+| SQL Server | 2019+ | Database |
+| Tailwind CSS | 4.x | Styling |
+| bcryptjs | 3.x | Password Hashing |
+| jose | 6.x | JWT Tokens |
+| mssql | 11.x | SQL Server Driver |
 
-1. What type of application to build
-2. What features are needed
-3. Design/branding preferences
+## Módulos Implementados
 
-## Quick Start Guide
+### A) Multiempresa (Tenant)
+- CRUD completo de Empresas
+- Datos: razón social, RIF, dirección fiscal, moneda funcional, configuración IVA/IGTF
+- Aislamiento por CompanyId
 
-### To add a new page:
+### B) Seguridad / Multiusuario
+- CRUD de Usuarios con hash bcrypt
+- Roles y Permisos (RBAC)
+- Auditoría de acciones
 
-Create a file at `src/app/[route]/page.tsx`:
-```tsx
-export default function NewPage() {
-  return <div>New page content</div>;
-}
-```
+### C) Plan de Cuentas
+- Estructura jerárquica (cuenta padre/hijo)
+- Niveles, naturaleza, tipo de cuenta
+- Validaciones
 
-### To add components:
+### D) Núcleo Contable
+- Comprobantes/Asientos contables
+- Encabezado y detalle
+- Regla: partida doble (sum(debe)=sum(haber))
+- Flujo: crear → editar → aprobar → anular
+- Períodos contables y cierres
+- Terceros: clientes/proveedores
 
-Create `src/components/` directory and add components:
-```tsx
-// src/components/ui/Button.tsx
-export function Button({ children }: { children: React.ReactNode }) {
-  return <button className="px-4 py-2 bg-blue-600 text-white rounded">{children}</button>;
-}
-```
+### E) Reportería
+- Balance de Comprobación
+- Estado de Resultados
+- Balance General
+- Mayor General
+- Diario General
+- Libro de Compras IVA
+- Libro de Ventas IVA
+- Reporte de IGTF
 
-### To add a database:
+## Quick Start
 
-Follow `.kilocode/recipes/add-database.md`
-
-### To add API routes:
-
-Create `src/app/api/[route]/route.ts`:
-```tsx
-import { NextResponse } from "next/server";
-
-export async function GET() {
-  return NextResponse.json({ message: "Hello" });
-}
-```
-
-## Available Recipes
-
-| Recipe | File | Use Case |
-|--------|------|----------|
-| Add Database | `.kilocode/recipes/add-database.md` | Data persistence with Drizzle + SQLite |
+1. Configurar variables de entorno (.env.local)
+2. Ejecutar database/schema.sql en SQL Server
+3. Instalar dependencias: bun install
+4. Iniciar servidor: bun dev
 
 ## Pending Improvements
 
-- [ ] Add more recipes (auth, email, etc.)
-- [ ] Add example components
-- [ ] Add testing setup recipe
+- [ ] Agregar más recipes (auth completo)
+- [ ] Tests automatizados
+- [ ] 2FA opcional
+- [ ] Exportación Excel/PDF
 
 ## Session History
 
 | Date | Changes |
 |------|---------|
-| Initial | Template created with base setup |
+| 2024-02-18 | Sistema Contable Venezuela - Versión inicial completa |
