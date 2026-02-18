@@ -554,6 +554,9 @@ CREATE INDEX IX_SalesBook_Date ON SalesBook(DocumentDate);
 -- ============================================================
 
 -- Balance de Comprobación
+IF OBJECT_ID('sp_GetTrialBalance', 'P') IS NOT NULL
+    DROP PROCEDURE sp_GetTrialBalance;
+GO
 CREATE PROCEDURE sp_GetTrialBalance
     @CompanyId INT,
     @PeriodId INT,
@@ -593,6 +596,9 @@ BEGIN
 END;
 
 -- Mayor General por Cuenta
+IF OBJECT_ID('sp_GetGeneralLedger', 'P') IS NOT NULL
+    DROP PROCEDURE sp_GetGeneralLedger;
+GO
 CREATE PROCEDURE sp_GetGeneralLedger
     @CompanyId INT,
     @AccountId INT,
@@ -633,6 +639,9 @@ BEGIN
 END;
 
 -- Estado de Resultados
+IF OBJECT_ID('sp_GetIncomeStatement', 'P') IS NOT NULL
+    DROP PROCEDURE sp_GetIncomeStatement;
+GO
 CREATE PROCEDURE sp_GetIncomeStatement
     @CompanyId INT,
     @PeriodId INT,
@@ -681,6 +690,9 @@ BEGIN
 END;
 
 -- Balance General
+IF OBJECT_ID('sp_GetBalanceSheet', 'P') IS NOT NULL
+    DROP PROCEDURE sp_GetBalanceSheet;
+GO
 CREATE PROCEDURE sp_GetBalanceSheet
     @CompanyId INT,
     @PeriodId INT
@@ -744,6 +756,9 @@ BEGIN
 END;
 
 -- Libro de Compras IVA
+IF OBJECT_ID('sp_GetPurchaseBook', 'P') IS NOT NULL
+    DROP PROCEDURE sp_GetPurchaseBook;
+GO
 CREATE PROCEDURE sp_GetPurchaseBook
     @CompanyId INT,
     @PeriodId INT
@@ -777,6 +792,9 @@ BEGIN
 END;
 
 -- Libro de Ventas IVA
+IF OBJECT_ID('sp_GetSalesBook', 'P') IS NOT NULL
+    DROP PROCEDURE sp_GetSalesBook;
+GO
 CREATE PROCEDURE sp_GetSalesBook
     @CompanyId INT,
     @PeriodId INT
@@ -809,6 +827,9 @@ BEGIN
 END;
 
 -- Reporte de IGTF
+IF OBJECT_ID('sp_GetIGTFReport', 'P') IS NOT NULL
+    DROP PROCEDURE sp_GetIGTFReport;
+GO
 CREATE PROCEDURE sp_GetIGTFReport
     @CompanyId INT,
     @PeriodId INT
@@ -837,6 +858,9 @@ BEGIN
 END;
 
 -- Diario General
+IF OBJECT_ID('sp_GetGeneralJournal', 'P') IS NOT NULL
+    DROP PROCEDURE sp_GetGeneralJournal;
+GO
 CREATE PROCEDURE sp_GetGeneralJournal
     @CompanyId INT,
     @DateFrom DATE,
