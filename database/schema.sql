@@ -615,6 +615,7 @@ BEGIN
     GROUP BY c.CompanyId, c.AccountCode, c.AccountName, c.Nature, c.AccountType, c.AccountLevel
     ORDER BY c.AccountCode;
 END;
+GO
 
 -- Mayor General por Cuenta
 CREATE PROCEDURE sp_GetGeneralLedger
@@ -655,6 +656,7 @@ BEGIN
         AND (@ThirdPartyId IS NULL OR d.ThirdPartyId = @ThirdPartyId)
     ORDER BY h.EntryDate, h.EntryNumber, d.LineNumber;
 END;
+GO
 
 -- Estado de Resultados
 CREATE PROCEDURE sp_GetIncomeStatement
@@ -703,6 +705,7 @@ BEGIN
     
     ORDER BY AccountCode;
 END;
+GO
 
 -- Balance General
 CREATE PROCEDURE sp_GetBalanceSheet
@@ -766,6 +769,7 @@ BEGIN
     
     ORDER BY AccountCode;
 END;
+GO
 
 -- Libro de Compras IVA
 CREATE PROCEDURE sp_GetPurchaseBook
@@ -799,6 +803,7 @@ BEGIN
         AND PeriodId = @PeriodId
     ORDER BY DocumentDate;
 END;
+GO
 
 -- Libro de Ventas IVA
 CREATE PROCEDURE sp_GetSalesBook
@@ -831,6 +836,7 @@ BEGIN
         AND PeriodId = @PeriodId
     ORDER BY DocumentDate;
 END;
+GO
 
 -- Reporte de IGTF
 CREATE PROCEDURE sp_GetIGTFReport
@@ -859,6 +865,7 @@ BEGIN
         AND h.Status = 'APPROVED'
     ORDER BY h.EntryDate;
 END;
+GO
 
 -- Diario General
 CREATE PROCEDURE sp_GetGeneralJournal
@@ -893,6 +900,7 @@ BEGIN
         AND h.EntryDate BETWEEN @DateFrom AND @DateTo
     ORDER BY h.EntryDate, h.EntryNumber, d.LineNumber;
 END;
+GO
 
 PRINT '===============================================';
 PRINT 'Base de datos SQL Server configurada exitosamente';
