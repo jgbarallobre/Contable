@@ -341,6 +341,7 @@ CREATE TABLE JournalEntryLines (
     TaxBase DECIMAL(20,2) DEFAULT 0,  -- Base imponible para IVA
     IVAAmount DECIMAL(20,2) DEFAULT 0,
     IGTFAmount DECIMAL(20,2) DEFAULT 0,
+    IGTFBaseAmount DECIMAL(20,2) DEFAULT 0,  -- Base imponible para IGTF
     IsIGTFApplicable BIT DEFAULT 0,
     CreatedAt DATETIME2 DEFAULT GETDATE(),
     CreatedBy INT,
