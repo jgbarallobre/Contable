@@ -628,6 +628,17 @@ AS
 BEGIN
     SET NOCOUNT ON;
     
+    -- Calcular saldo inicial
+    DECLARE @InitialBalance DECIMAL(18,2);
+    SELECT @InitialBalance = ISNULL(SUM(d.Debit) - SUM(d.Credit), 0)
+    FROM JournalEntryLines d
+    INNER JOIN JournalEntryHeaders h ON d.EntryId = h.EntryId
+    WHERE h.CompanyId = @CompanyId 
+        AND d.AccountId = @AccountId
+        AND h.EntryDate < @DateFrom
+        AND h.Status = 'APPROVED';
+    
+    -- Obtener movimientos del período
     SELECT 
         h.EntryId,
         h.EntryNumber,
@@ -638,11 +649,7 @@ BEGIN
         ISNULL(t.LegalName, '-') AS ThirdPartyName,
         d.Debit,
         d.Credit,
-        (SELECT SUM(Debit) - SUM(Credit) 
-         FROM JournalEntryLines 
-         WHERE AccountId = @AccountId 
-         AND EntryId IN (SELECT EntryId FROM JournalEntryHeaders WHERE EntryDate < @DateFrom)) 
-         + SUM(d.Debit) - SUM(d.Credit) OVER (ORDER BY h.EntryDate, d.LineNumber) AS RunningBalance,
+        @InitialBalance + SUM(d.Debit - d.Credit) OVER (ORDER BY h.EntryDate, h.EntryNumber, d.LineNumber) AS RunningBalance,
         h.Status,
         u.Username AS CreatedBy
     FROM JournalEntryLines d
