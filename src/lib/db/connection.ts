@@ -31,12 +31,20 @@ export async function getDb(): Promise<sql.ConnectionPool> {
   }
 
   try {
+    console.log('Attempting database connection with config:', {
+      server: dbConfig.server,
+      database: dbConfig.database,
+      user: dbConfig.user,
+      encrypt: dbConfig.options.encrypt,
+      trustServerCertificate: dbConfig.options.trustServerCertificate,
+    });
     pool = await sql.connect(dbConfig);
     console.log('Connected to SQL Server successfully');
     return pool;
   } catch (error) {
     console.error('Database connection failed:', error);
-    throw new Error('Failed to connect to database');
+    const errMsg = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to connect to database: ${errMsg}`);
   }
 }
 
