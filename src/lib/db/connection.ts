@@ -26,7 +26,8 @@ let pool: sql.ConnectionPool | null = null;
  * Get or create a database connection pool
  */
 export async function getDb(): Promise<sql.ConnectionPool> {
-  if (pool?.connected) {
+  // Check if pool exists and is connected
+  if (pool && pool.connected) {
     return pool;
   }
 
