@@ -37,10 +37,28 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Database connection error:', error);
+    
+    // Get more detailed error information
+    let detailedError = 'Unknown error';
+    if (error instanceof Error) {
+      detailedError = error.message;
+      
+      // Check for specific connection errors
+      if (error.message.includes('login failed') || error.message.includes('Login failed')) {
+        detailedError = 'Credenciales incorrectas. Verifica DB_USER y DB_PASSWORD en .env.local';
+      } else if (error.message.includes('cannot open server') || error.message.includes('Server not found')) {
+        detailedError = `Servidor no encontrado: ${process.env.DB_SERVER}. Verifica que SQL Server esté ejecutándose.`;
+      } else if (error.message.includes('database') && error.message.includes('not found')) {
+        detailedError = `Base de datos '${process.env.DB_NAME}' no existe. Ejecuta database/schema.sql`;
+      } else if (error.message.includes('timeout')) {
+        detailedError = 'Tiempo de conexión agotado. El servidor puede no estar accesible.';
+      }
+    }
+    
     return NextResponse.json({
       success: false,
-      message: 'Database connection failed',
-      error: error instanceof Error ? error.message : 'Unknown error',
+      message: 'Error al conectar a la base de datos',
+      error: detailedError,
       env: {
         server: process.env.DB_SERVER || 'not set',
         database: process.env.DB_NAME || 'not set',
