@@ -9,7 +9,7 @@ const sql = require('mssql');
 
 // Configuration that works with local SQL Server Express
 const config = {
-  server: 'localhost\\express',
+  server: 'DESKTOP\\EXPRESS',
   database: 'ContabilidadVE',
   user: 'sa',
   password: 'solucionesnetpos2022*',
