@@ -20,6 +20,7 @@ El proyecto es un sistema completo de contabilidad para Venezuela con SQL Server
 - [x] Documentación completa (README.md)
 - [x] Mejora en mensajes de error de conexión a BD
 - [x] Fix en verificación de pool de conexión
+- [x] Fix FK cascade cycles en schema.sql (UserCompanies, Roles)
 
 ## Current Structure
 
@@ -108,5 +109,6 @@ El proyecto es un sistema completo de contabilidad para Venezuela con SQL Server
 
 | Date | Changes |
 |------|---------|
-| 2024-02-20 | Conexión SQL Server verificada exitosamente (DESKTOP\EXPRESS, 21 tablas) |
+| 2026-02-20 | Conexión SQL Server verificada exitosamente (DESKTOP\EXPRESS, 21 tablas) |
+| 2026-02-18 | Fix FK cascade cycles en schema.sql |
 | 2024-02-18 | Sistema Contable Venezuela - Versión inicial completa |

@@ -54,15 +54,27 @@ export async function POST(request: NextRequest) {
     const err = error as Error & { message?: string };
     // Proporcionar mensaje de error más detallado
     let errorMessage = 'Error interno del servidor';
-    if (err.message?.includes('connection')) {
+    
+    // Análisis más detallado del error
+    const errorStr = String(error);
+    if (errorStr.includes('connection') || errorStr.includes('ECONNREFUSED') || errorStr.includes('getaddrinfo')) {
+      errorMessage = '❌ No se puede conectar a SQL Server. Verifica que el servidor esté ejecutándose y que DB_SERVER en .env.local sea correcto.';
+    } else if (errorStr.includes('login failed') || errorStr.includes('Login failed')) {
+      errorMessage = '❌ Error de autenticación en SQL Server. Verifica DB_USER y DB_PASSWORD en .env.local.';
+    } else if (errorStr.includes('database') || errorStr.includes('Cannot open database')) {
+      errorMessage = '❌ La base de datos no existe o no se puede acceder. Verifica DB_NAME en .env.local y ejecuta database/schema.sql.';
+    } else if (err.message?.includes('connection')) {
       errorMessage = 'Error de conexión a la base de datos. Verifica tu archivo .env.local';
     } else if (err.message?.includes('login')) {
       errorMessage = 'Error de autenticación en SQL Server. Verifica el usuario y contraseña';
     } else if (err.message?.includes('database')) {
       errorMessage = 'La base de datos no existe o no se puede acceder';
     }
+    
+    // Log detallado para debugging
+    console.log('Error details:', errorStr);
     return NextResponse.json(
-      { Success: false, Message: errorMessage },
+      { Success: false, Message: errorMessage, Debug: process.env.NODE_ENV === 'development' ? errorStr : undefined },
       { status: 500 }
     );
   }
