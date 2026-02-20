@@ -109,6 +109,7 @@ El proyecto es un sistema completo de contabilidad para Venezuela con SQL Server
 
 | Date | Changes |
 |------|---------|
+| 2026-02-20 | Fix mssql import (default import instead of named) and TypeScript errors in journal route |
 | 2026-02-20 | Conexión SQL Server verificada exitosamente (DESKTOP\EXPRESS, 21 tablas) |
 | 2026-02-18 | Fix FK cascade cycles en schema.sql |
 | 2024-02-18 | Sistema Contable Venezuela - Versión inicial completa |
