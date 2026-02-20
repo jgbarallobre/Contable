@@ -1,4 +1,4 @@
-import { sql } from 'mssql';
+import mssql from 'mssql';
 
 // Database configuration - adjust these for your SQL Server instance
 const dbConfig = {
@@ -20,12 +20,12 @@ const dbConfig = {
   },
 };
 
-let pool: sql.ConnectionPool | null = null;
+let pool: mssql.ConnectionPool | null = null;
 
 /**
  * Get or create a database connection pool
  */
-export async function getDb(): Promise<sql.ConnectionPool> {
+export async function getDb(): Promise<mssql.ConnectionPool> {
   // Check if pool exists and is connected
   if (pool && pool.connected) {
     return pool;
@@ -39,7 +39,7 @@ export async function getDb(): Promise<sql.ConnectionPool> {
       encrypt: dbConfig.options.encrypt,
       trustServerCertificate: dbConfig.options.trustServerCertificate,
     });
-    pool = await sql.connect(dbConfig);
+    pool = await mssql.connect(dbConfig);
     console.log('Connected to SQL Server successfully');
     return pool;
   } catch (error) {
@@ -98,7 +98,7 @@ export async function executeProcedure<T>(
  * Execute a transaction
  */
 export async function withTransaction<T>(
-  callback: (transaction: sql.Transaction) => Promise<T>
+  callback: (transaction: mssql.Transaction) => Promise<T>
 ): Promise<T> {
   const pool = await getDb();
   const transaction = pool.transaction();
@@ -126,14 +126,14 @@ export async function closeDb(): Promise<void> {
 
 // SQL types for reference - lazy initialization to avoid undefined errors
 export const SQL_TYPES = {
-  get INT() { return sql.Int; },
-  get VARCHAR() { return sql.VarChar; },
-  get NVARCHAR() { return sql.NVarChar; },
-  get DECIMAL() { return sql.Decimal; },
-  get DATETIME2() { return sql.DateTime2; },
-  get DATE() { return sql.Date; },
-  get BIT() { return sql.Bit; },
-  get BIGINT() { return sql.BigInt; },
-  get TEXT() { return sql.Text; },
-  get JSON() { return sql.NVarChar(sql.MAX); },
+  get INT() { return mssql.Int; },
+  get VARCHAR() { return mssql.VarChar; },
+  get NVARCHAR() { return mssql.NVarChar; },
+  get DECIMAL() { return mssql.Decimal; },
+  get DATETIME2() { return mssql.DateTime2; },
+  get DATE() { return mssql.Date; },
+  get BIT() { return mssql.Bit; },
+  get BIGINT() { return mssql.BigInt; },
+  get TEXT() { return mssql.Text; },
+  get JSON() { return mssql.NVarChar(mssql.MAX); },
 };

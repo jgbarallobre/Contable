@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession, hasPermission } from '@/lib/auth';
 import { query, queryOne, withTransaction } from '@/lib/db/connection';
-import type { JournalEntryCreate, JournalEntryHeader, Period } from '@/lib/types';
+import type { JournalEntryCreate, JournalEntryHeader, JournalEntryLine, Period } from '@/lib/types';
 
 // GET - Listar asientos
 export async function GET(request: NextRequest) {
@@ -396,7 +396,7 @@ export async function REVERSE(request: NextRequest) {
     }
 
     // Obtener líneas originales
-    const originalLines = await query(
+    const originalLines = await query<JournalEntryLine>(
       `SELECT * FROM JournalEntryLines WHERE EntryId = @EntryId`,
       { EntryId }
     );
