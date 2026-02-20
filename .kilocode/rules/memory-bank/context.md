@@ -8,7 +8,8 @@ El proyecto es un sistema completo de contabilidad para Venezuela con SQL Server
 
 ## Recently Completed
 
-- [x] Base de datos SQL Server con 18 tablas
+- [x] Base de datos SQL Server con 21 tablas
+- [x] Conexión verificada a SQL Server (DESKTOP\EXPRESS)
 - [x] Procedimientos almacenados para reportes (9)
 - [x] API Routes para autenticación
 - [x] API Routes para CRUD de empresas, cuentas, asientos, terceros, períodos
@@ -85,7 +86,11 @@ El proyecto es un sistema completo de contabilidad para Venezuela con SQL Server
 
 ## Quick Start
 
-1. Configurar variables de entorno (.env.local)
+1. Configurar variables de entorno (.env.local):
+   - DB_SERVER=DESKTOP\EXPRESS
+   - DB_NAME=ContabilidadVE
+   - DB_USER=sa
+   - DB_PASSWORD=(tu password)
 2. Ejecutar database/schema.sql en SQL Server
 3. Instalar dependencias: bun install
 4. Iniciar servidor: bun dev
@@ -101,4 +106,5 @@ El proyecto es un sistema completo de contabilidad para Venezuela con SQL Server
 
 | Date | Changes |
 |------|---------|
+| 2024-02-20 | Conexión SQL Server verificada exitosamente (DESKTOP\EXPRESS, 21 tablas) |
 | 2024-02-18 | Sistema Contable Venezuela - Versión inicial completa |
