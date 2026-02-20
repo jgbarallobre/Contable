@@ -18,6 +18,8 @@ El proyecto es un sistema completo de contabilidad para Venezuela con SQL Server
 - [x] Sistema de autenticación JWT con bcrypt
 - [x] Sistema de permisos RBAC
 - [x] Documentación completa (README.md)
+- [x] Mejora en mensajes de error de conexión a BD
+- [x] Fix en verificación de pool de conexión
 
 ## Current Structure
 
