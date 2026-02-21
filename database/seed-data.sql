@@ -73,7 +73,7 @@ INSERT INTO Users (
 VALUES (
     'admin',
     'admin@comercialejemplo.com',
-    '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', -- password: Demo123!
+    '$2b$10$/OktFN05aKUpAzqwTiCE8eH4iYz0/sWA0WI6jOr9k1ar86quW.rFO', -- password: Demo123!
     'Administrador',
     'Sistema',
     '+58 212 555-1234',
