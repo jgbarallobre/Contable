@@ -75,12 +75,16 @@ export async function authenticateUser(
   username: string,
   password: string
 ): Promise<{ success: boolean; user?: AuthUser; message?: string }> {
+  console.log('DEBUG authenticateUser: Received username:', username, 'password length:', password?.length);
+  
   // Buscar usuario
   const dbUser = await queryOne<DbUser>(
     `SELECT UserId, Username, Email, PasswordHash, FirstName, LastName, IsActive, IsBlocked 
      FROM Users WHERE Username = @Username OR Email = @Username`,
     { Username: username }
   );
+  
+  console.log('DEBUG authenticateUser: dbUser:', dbUser);
   
   if (!dbUser) {
     // Usuario no encontrado - mensaje específico
@@ -96,7 +100,17 @@ export async function authenticateUser(
   }
   
   // Verificar contraseña - mensaje específico si la contraseña es incorrecta
-  const validPassword = await verifyPassword(password, dbUser.PasswordHash);
+  console.log('DEBUG: Attempting password verification');
+  console.log('DEBUG: Received password length:', password?.length);
+  console.log('DEBUG: Hash from DB length:', dbUser.PasswordHash?.length);
+  console.log('DEBUG: Hash from DB:', dbUser.PasswordHash);
+  
+  // Trim password and hash to handle potential whitespace issues
+  const trimmedPassword = password?.trim() || '';
+  const trimmedHash = dbUser.PasswordHash?.trim() || '';
+  
+  const validPassword = await verifyPassword(trimmedPassword, trimmedHash);
+  console.log('DEBUG: Password verification result:', validPassword);
   if (!validPassword) {
     // Incrementar intentos fallidos
     await query(
