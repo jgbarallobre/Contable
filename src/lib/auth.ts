@@ -102,8 +102,10 @@ export async function authenticateUser(
   // Verificar contraseña - mensaje específico si la contraseña es incorrecta
   console.log('DEBUG: Attempting password verification');
   console.log('DEBUG: Received password length:', password?.length);
+  console.log('DEBUG: Received password bytes:', Array.from(Buffer.from(password || '')).slice(0, 10));
   console.log('DEBUG: Hash from DB length:', dbUser.PasswordHash?.length);
   console.log('DEBUG: Hash from DB:', dbUser.PasswordHash);
+  console.log('DEBUG: Hash from DB bytes:', dbUser.PasswordHash ? Array.from(Buffer.from(dbUser.PasswordHash)).slice(0, 10) : []);
   
   // Trim password and hash to handle potential whitespace issues
   const trimmedPassword = password?.trim() || '';
@@ -111,6 +113,7 @@ export async function authenticateUser(
   
   const validPassword = await verifyPassword(trimmedPassword, trimmedHash);
   console.log('DEBUG: Password verification result:', validPassword);
+  console.log('DEBUG: After trim - password length:', trimmedPassword.length, 'hash length:', trimmedHash.length);
   if (!validPassword) {
     // Incrementar intentos fallidos
     await query(

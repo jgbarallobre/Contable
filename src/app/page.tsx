@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 type Module = "dashboard" | "companies" | "accounts" | "journal" | "thirdparties" | "periods" | "reports" | "users";
 
@@ -637,6 +637,31 @@ function ReportsView() {
 
 // ==================== USERS VIEW ====================
 function UsersView() {
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch('/api/users');
+      const data = await res.json();
+      if (data.Success) {
+        setUsers(data.Data || []);
+      } else {
+        setError(data.Message || 'Error al cargar usuarios');
+      }
+    } catch (err) {
+      setError('Error de conexión');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -649,33 +674,51 @@ function UsersView() {
         </button>
       </div>
       
+      {error && (
+        <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">{error}</div>
+      )}
+      
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="text-left py-3 px-4 font-semibold text-gray-600">Usuario</th>
-              <th className="text-left py-3 px-4 font-semibold text-gray-600">Nombre</th>
-              <th className="text-left py-3 px-4 font-semibold text-gray-600">Email</th>
-              <th className="text-left py-3 px-4 font-semibold text-gray-600">Rol</th>
-              <th className="text-center py-3 px-4 font-semibold text-gray-600">Estado</th>
-              <th className="text-center py-3 px-4 font-semibold text-gray-600">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr className="border-b border-gray-100 hover:bg-gray-50">
-              <td className="py-3 px-4">admin</td>
-              <td className="py-3 px-4">Administrador</td>
-              <td className="py-3 px-4">admin@empresa.com</td>
-              <td className="py-3 px-4">Administrador</td>
-              <td className="py-3 px-4 text-center">
-                <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">Activo</span>
-              </td>
-              <td className="py-3 px-4 text-center">
-                <button className="text-blue-600 hover:text-blue-800 mr-2">Editar</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        {loading ? (
+          <div className="p-8 text-center text-gray-500">Cargando...</div>
+        ) : (
+          <table className="w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="text-left py-3 px-4 font-semibold text-gray-600">Usuario</th>
+                <th className="text-left py-3 px-4 font-semibold text-gray-600">Nombre</th>
+                <th className="text-left py-3 px-4 font-semibold text-gray-600">Email</th>
+                <th className="text-left py-3 px-4 font-semibold text-gray-600">Teléfono</th>
+                <th className="text-center py-3 px-4 font-semibold text-gray-600">Estado</th>
+                <th className="text-center py-3 px-4 font-semibold text-gray-600">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-gray-500">No hay usuarios</td>
+                </tr>
+              ) : (
+                users.map((user) => (
+                  <tr key={user.UserId} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="py-3 px-4">{user.Username}</td>
+                    <td className="py-3 px-4">{user.FirstName} {user.LastName}</td>
+                    <td className="py-3 px-4">{user.Email}</td>
+                    <td className="py-3 px-4">{user.Phone || '-'}</td>
+                    <td className="py-3 px-4 text-center">
+                      <span className={`px-2 py-1 rounded-full text-xs ${user.IsActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                        {user.IsActive ? 'Activo' : 'Inactivo'}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      <button className="text-blue-600 hover:text-blue-800 mr-2">Editar</button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
