@@ -83,7 +83,8 @@ export async function authenticateUser(
   );
   
   if (!dbUser) {
-    return { success: false, message: 'Usuario o contraseña incorrectos' };
+    // Usuario no encontrado - mensaje específico
+    return { success: false, message: 'Usuario no encontrado' };
   }
   
   if (!dbUser.IsActive) {
@@ -94,7 +95,7 @@ export async function authenticateUser(
     return { success: false, message: 'Usuario bloqueado' };
   }
   
-  // Verificar contraseña
+  // Verificar contraseña - mensaje específico si la contraseña es incorrecta
   const validPassword = await verifyPassword(password, dbUser.PasswordHash);
   if (!validPassword) {
     // Incrementar intentos fallidos
@@ -103,7 +104,7 @@ export async function authenticateUser(
        WHERE UserId = @UserId`,
       { UserId: dbUser.UserId }
     );
-    return { success: false, message: 'Usuario o contraseña incorrectos' };
+    return { success: false, message: 'Contraseña incorrecta' };
   }
   
   // Obtener empresas del usuario
