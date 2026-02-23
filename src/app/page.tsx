@@ -1948,8 +1948,8 @@ function JournalView() {
                             : 'hover:bg-blue-50'
                         }`}
                       >
-                        <td className="py-2 px-4 font-mono text-blue-600">{account.Code}</td>
-                        <td className="py-2 px-4">{account.Name}</td>
+                        <td className="py-2 px-4 font-mono text-blue-600">{account.AccountCode}</td>
+                        <td className="py-2 px-4">{account.AccountName}</td>
                         <td className="py-2 px-4 text-gray-500">{account.AccountType}</td>
                       </tr>
                     ))
