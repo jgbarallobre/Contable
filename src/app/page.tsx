@@ -279,6 +279,128 @@ function DashboardView() {
 
 // ==================== COMPANIES VIEW ====================
 function CompaniesView() {
+  const [companies, setCompanies] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [editingCompany, setEditingCompany] = useState<any>(null);
+  const [formData, setFormData] = useState({
+    CompanyCode: "",
+    CompanyName: "",
+    TaxId: "",
+    Address: "",
+    Phone: "",
+    Email: "",
+    Currency: "VES",
+    TaxConfig: {
+      ivaRate: 16,
+      igtfRate: 3,
+    },
+    IsActive: true,
+  });
+
+  useEffect(() => {
+    fetchCompanies();
+  }, []);
+
+  const fetchCompanies = async () => {
+    try {
+      const res = await fetch("/api/companies");
+      const data = await res.json();
+      if (data.Success) {
+        setCompanies(data.Data || []);
+      }
+    } catch (error) {
+      console.error("Error fetching companies:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddNew = () => {
+    setEditingCompany(null);
+    setFormData({
+      CompanyCode: "",
+      CompanyName: "",
+      TaxId: "",
+      Address: "",
+      Phone: "",
+      Email: "",
+      Currency: "VES",
+      TaxConfig: {
+        ivaRate: 16,
+        igtfRate: 3,
+      },
+      IsActive: true,
+    });
+    setShowModal(true);
+  };
+
+  const handleEdit = (company: any) => {
+    setEditingCompany(company);
+    setFormData({
+      CompanyCode: company.CompanyCode || "",
+      CompanyName: company.CompanyName || "",
+      TaxId: company.TaxId || "",
+      Address: company.Address || "",
+      Phone: company.Phone || "",
+      Email: company.Email || "",
+      Currency: company.Currency || "VES",
+      TaxConfig: company.TaxConfig || { ivaRate: 16, igtfRate: 3 },
+      IsActive: company.IsActive ?? true,
+    });
+    setShowModal(true);
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const url = editingCompany 
+        ? `/api/companies?id=${editingCompany.CompanyId}`
+        : "/api/companies";
+      const method = editingCompany ? "PUT" : "POST";
+      
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+      
+      const data = await res.json();
+      if (data.Success) {
+        setShowModal(false);
+        fetchCompanies();
+      } else {
+        alert(data.Message || "Error al guardar");
+      }
+    } catch (error) {
+      console.error("Error saving company:", error);
+      alert("Error al guardar la empresa");
+    }
+  };
+
+  const handleDelete = async (companyId: number) => {
+    if (!confirm("¿Está seguro de eliminar esta empresa?")) return;
+    
+    try {
+      const res = await fetch(`/api/companies?id=${companyId}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (data.Success) {
+        fetchCompanies();
+      } else {
+        alert(data.Message || "Error al eliminar");
+      }
+    } catch (error) {
+      console.error("Error deleting company:", error);
+      alert("Error al eliminar la empresa");
+    }
+  };
+
+  if (loading) {
+    return <div className="p-8 text-center text-gray-500">Cargando...</div>;
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -286,7 +408,10 @@ function CompaniesView() {
           <h2 className="text-2xl font-bold text-gray-800">Empresas</h2>
           <p className="text-gray-500">Gestión de empresas del sistema</p>
         </div>
-        <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
+        <button 
+          onClick={handleAddNew}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+        >
           <span>+</span> Nueva Empresa
         </button>
       </div>
@@ -304,22 +429,199 @@ function CompaniesView() {
             </tr>
           </thead>
           <tbody>
-            <tr className="border-b border-gray-100 hover:bg-gray-50">
-              <td className="py-3 px-4">EMP001</td>
-              <td className="py-3 px-4">Industrias Venezuela CA</td>
-              <td className="py-3 px-4">J-12345678-9</td>
-              <td className="py-3 px-4">VES</td>
-              <td className="py-3 px-4 text-center">
-                <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">Activa</span>
-              </td>
-              <td className="py-3 px-4 text-center">
-                <button className="text-blue-600 hover:text-blue-800 mr-2">Editar</button>
-                <button className="text-gray-600 hover:text-gray-800">Ver</button>
-              </td>
-            </tr>
+            {companies.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="py-8 text-center text-gray-500">
+                  No hay empresas registradas. Haga clic en &quot;Nueva Empresa&quot; para agregar una.
+                </td>
+              </tr>
+            ) : (
+              companies.map((company) => (
+                <tr key={company.CompanyId} className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="py-3 px-4">{company.CompanyCode}</td>
+                  <td className="py-3 px-4">{company.CompanyName}</td>
+                  <td className="py-3 px-4">{company.TaxId}</td>
+                  <td className="py-3 px-4">{company.Currency}</td>
+                  <td className="py-3 px-4 text-center">
+                    <span className={`px-2 py-1 rounded-full text-xs ${company.IsActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"}`}>
+                      {company.IsActive ? "Activa" : "Inactiva"}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 text-center">
+                    <button 
+                      onClick={() => handleEdit(company)}
+                      className="text-blue-600 hover:text-blue-800 mr-2"
+                    >
+                      Editar
+                    </button>
+                    <button 
+                      onClick={() => handleDelete(company.CompanyId)}
+                      className="text-red-600 hover:text-red-800"
+                    >
+                      Eliminar
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
+
+      {/* Modal for Add/Edit */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-xl font-bold text-gray-800">
+                {editingCompany ? "Editar Empresa" : "Nueva Empresa"}
+              </h3>
+            </div>
+            <form onSubmit={handleSave} className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Código</label>
+                  <input
+                    type="text"
+                    value={formData.CompanyCode}
+                    onChange={(e) => setFormData({ ...formData, CompanyCode: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">RIF</label>
+                  <input
+                    type="text"
+                    value={formData.TaxId}
+                    onChange={(e) => setFormData({ ...formData, TaxId: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    placeholder="J-12345678-9"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Razón Social</label>
+                <input
+                  type="text"
+                  value={formData.CompanyName}
+                  onChange={(e) => setFormData({ ...formData, CompanyName: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Dirección Fiscal</label>
+                <textarea
+                  value={formData.Address}
+                  onChange={(e) => setFormData({ ...formData, Address: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  rows={2}
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+                  <input
+                    type="text"
+                    value={formData.Phone}
+                    onChange={(e) => setFormData({ ...formData, Phone: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <input
+                    type="email"
+                    value={formData.Email}
+                    onChange={(e) => setFormData({ ...formData, Email: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Moneda</label>
+                  <select
+                    value={formData.Currency}
+                    onChange={(e) => setFormData({ ...formData, Currency: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  >
+                    <option value="VES">VES - Bolívar</option>
+                    <option value="USD">USD - Dólar</option>
+                    <option value="EUR">EUR - Euro</option>
+                  </select>
+                </div>
+                <div className="flex items-center mt-6">
+                  <input
+                    type="checkbox"
+                    id="isActive"
+                    checked={formData.IsActive}
+                    onChange={(e) => setFormData({ ...formData, IsActive: e.target.checked })}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded"
+                  />
+                  <label htmlFor="isActive" className="ml-2 text-sm text-gray-700">
+                    Empresa Activa
+                  </label>
+                </div>
+              </div>
+              
+              <div className="border-t border-gray-200 pt-4 mt-6">
+                <h4 className="font-medium text-gray-800 mb-3">Configuración de Impuestos</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Tasa IVA (%)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={formData.TaxConfig.ivaRate}
+                      onChange={(e) => setFormData({ 
+                        ...formData, 
+                        TaxConfig: { ...formData.TaxConfig, ivaRate: parseFloat(e.target.value) } 
+                      })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Tasa IGTF (%)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={formData.TaxConfig.igtfRate}
+                      onChange={(e) => setFormData({ 
+                        ...formData, 
+                        TaxConfig: { ...formData.TaxConfig, igtfRate: parseFloat(e.target.value) } 
+                      })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex justify-end gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+                >
+                  {editingCompany ? "Guardar Cambios" : "Crear Empresa"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
