@@ -1296,6 +1296,72 @@ function JournalView() {
     }
   };
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleLineChange = (index: number, field: string, value: any) => {
+    const newLines = [...formData.Lines];
+    newLines[index] = { ...newLines[index], [field]: value };
+    setFormData(prev => ({ ...prev, Lines: newLines }));
+  };
+
+  const addLine = () => {
+    setFormData(prev => ({
+      ...prev,
+      Lines: [...prev.Lines, { AccountId: 0, Description: "", Debit: 0, Credit: 0 }]
+    }));
+  };
+
+  const removeLine = (index: number) => {
+    if (formData.Lines.length > 1) {
+      const newLines = formData.Lines.filter((_, i) => i !== index);
+      setFormData(prev => ({ ...prev, Lines: newLines }));
+    }
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validate debit equals credit
+    const totalDebit = formData.Lines.reduce((sum, line) => sum + (parseFloat(String(line.Debit)) || 0), 0);
+    const totalCredit = formData.Lines.reduce((sum, line) => sum + (parseFloat(String(line.Credit)) || 0), 0);
+    
+    if (Math.abs(totalDebit - totalCredit) > 0.01) {
+      alert("El total del Debe debe ser igual al total del Haber");
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/journal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      const data = await res.json();
+      if (data.Success) {
+        setShowModal(false);
+        setFormData({
+          EntryType: "DAILY",
+          EntryDate: new Date().toISOString().split('T')[0],
+          Description: "",
+          Reference: "",
+          Lines: [{ AccountId: 0, Description: "", Debit: 0, Credit: 0 }]
+        });
+        fetchEntries();
+      } else {
+        alert(data.Message || "Error al guardar el asiento");
+      }
+    } catch (error) {
+      console.error("Error saving entry:", error);
+      alert("Error al guardar el asiento");
+    }
+  };
+
+  const totalDebit = formData.Lines.reduce((sum, line) => sum + (parseFloat(String(line.Debit)) || 0), 0);
+  const totalCredit = formData.Lines.reduce((sum, line) => sum + (parseFloat(String(line.Credit)) || 0), 0);
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -1450,6 +1516,185 @@ function JournalView() {
               <p>Total Debe: {formatCurrency(selectedEntry.TotalDebit)}</p>
               <p>Total Haber: {formatCurrency(selectedEntry.TotalCredit)}</p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* New Entry Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-xl font-bold text-gray-800">Nuevo Asiento Contable</h3>
+            </div>
+            <form onSubmit={handleSave} className="p-6 space-y-4">
+              <div className="grid grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+                  <select
+                    name="EntryType"
+                    value={formData.EntryType}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  >
+                    <option value="DAILY">Diario</option>
+                    <option value="INCOME">Ingreso</option>
+                    <option value="EXPENSE">Egreso</option>
+                    <option value="ADJUSTMENT">Ajuste</option>
+                    <option value="CLOSING">Cierre</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
+                  <input
+                    type="date"
+                    name="EntryDate"
+                    value={formData.EntryDate}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    required
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Referencia</label>
+                  <input
+                    type="text"
+                    name="Reference"
+                    value={formData.Reference}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    placeholder="Número de referencia"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+                <textarea
+                  name="Description"
+                  value={formData.Description}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  rows={2}
+                  placeholder="Descripción del asiento"
+                  required
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-sm font-medium text-gray-700">Líneas del Asiento</label>
+                  <button
+                    type="button"
+                    onClick={addLine}
+                    className="text-sm text-blue-600 hover:text-blue-800"
+                  >
+                    + Agregar línea
+                  </button>
+                </div>
+                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="text-left py-2 px-3 font-medium text-gray-600">Cuenta</th>
+                        <th className="text-left py-2 px-3 font-medium text-gray-600">Descripción</th>
+                        <th className="text-right py-2 px-3 font-medium text-gray-600">Debe</th>
+                        <th className="text-right py-2 px-3 font-medium text-gray-600">Haber</th>
+                        <th className="w-10"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {formData.Lines.map((line, index) => (
+                        <tr key={index} className="border-t border-gray-100">
+                          <td className="py-2 px-2">
+                            <input
+                              type="number"
+                              value={line.AccountId || ''}
+                              onChange={(e) => handleLineChange(index, 'AccountId', parseInt(e.target.value) || 0)}
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                              placeholder="ID Cuenta"
+                              required
+                            />
+                          </td>
+                          <td className="py-2 px-2">
+                            <input
+                              type="text"
+                              value={line.Description}
+                              onChange={(e) => handleLineChange(index, 'Description', e.target.value)}
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                              placeholder="Descripción"
+                            />
+                          </td>
+                          <td className="py-2 px-2">
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={line.Debit || ''}
+                              onChange={(e) => handleLineChange(index, 'Debit', parseFloat(e.target.value) || 0)}
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm text-right"
+                              placeholder="0.00"
+                            />
+                          </td>
+                          <td className="py-2 px-2">
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={line.Credit || ''}
+                              onChange={(e) => handleLineChange(index, 'Credit', parseFloat(e.target.value) || 0)}
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm text-right"
+                              placeholder="0.00"
+                            />
+                          </td>
+                          <td className="py-2 px-2 text-center">
+                            <button
+                              type="button"
+                              onClick={() => removeLine(index)}
+                              disabled={formData.Lines.length === 1}
+                              className="text-red-600 hover:text-red-800 disabled:text-gray-300 disabled:cursor-not-allowed"
+                            >
+                              ✕
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot className="bg-gray-50 font-medium">
+                      <tr>
+                        <td colSpan={2} className="py-2 px-3 text-right">Totales:</td>
+                        <td className={`py-2 px-3 text-right ${Math.abs(totalDebit - totalCredit) > 0.01 ? 'text-red-600' : 'text-green-600'}`}>
+                          {formatCurrency(totalDebit)}
+                        </td>
+                        <td className={`py-2 px-3 text-right ${Math.abs(totalDebit - totalCredit) > 0.01 ? 'text-red-600' : 'text-green-600'}`}>
+                          {formatCurrency(totalCredit)}
+                        </td>
+                        <td></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+                {Math.abs(totalDebit - totalCredit) > 0.01 && (
+                  <p className="text-red-600 text-sm mt-1">
+                    Diferencia: {formatCurrency(Math.abs(totalDebit - totalCredit))} - La partida debe balancear
+                  </p>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Guardar Asiento
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
