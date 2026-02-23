@@ -8,6 +8,7 @@ El proyecto es un sistema completo de contabilidad para Venezuela con SQL Server
 
 ## Recently Completed
 
+- [x] Implementar JournalView con API -获取asientos contables, paginación, filtros, aprobar/anular
 - [x] Debug de autenticación: Agregar logging y endpoint de prueba para diagnosticar error de contraseña incorrecta
 - [x] Fix en mensajes de login para diferenciar usuario vs contraseña incorrecta
 - [x] Commit de datos demo y script de password reset
@@ -112,6 +113,7 @@ El proyecto es un sistema completo de contabilidad para Venezuela con SQL Server
 
 | Date | Changes |
 |------|---------|
+| 2026-02-23 | Implementar JournalView con API - fetch entries, pagination, filters, approve/annul actions |
 | 2026-02-22 | Debug de autenticación: Agregar logging y endpoint de prueba para diagnosticar error de contraseña |
 | 2026-02-22 | Fix en mensajes de login para diferenciar usuario vs contraseña incorrecta |
 | 2026-02-20 | Fix mssql import (default import instead of named) and TypeScript errors in journal route |
