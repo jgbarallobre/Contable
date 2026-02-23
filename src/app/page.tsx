@@ -942,6 +942,18 @@ function UsersView() {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [formData, setFormData] = useState({
+    Username: '',
+    Email: '',
+    Password: '',
+    FirstName: '',
+    LastName: '',
+    Phone: '',
+    IsActive: true,
+    IsBlocked: false,
+  });
 
   useEffect(() => {
     fetchUsers();
@@ -964,6 +976,82 @@ function UsersView() {
     }
   };
 
+  const handleAddNew = () => {
+    setEditingUser(null);
+    setFormData({
+      Username: '',
+      Email: '',
+      Password: '',
+      FirstName: '',
+      LastName: '',
+      Phone: '',
+      IsActive: true,
+      IsBlocked: false,
+    });
+    setShowModal(true);
+  };
+
+  const handleEdit = (user: any) => {
+    setEditingUser(user);
+    setFormData({
+      Username: user.Username || '',
+      Email: user.Email || '',
+      Password: '', // Don't show existing password
+      FirstName: user.FirstName || '',
+      LastName: user.LastName || '',
+      Phone: user.Phone || '',
+      IsActive: user.IsActive ?? true,
+      IsBlocked: user.IsBlocked ?? false,
+    });
+    setShowModal(true);
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const url = editingUser 
+        ? `/api/users?id=${editingUser.UserId}`
+        : '/api/users';
+      const method = editingUser ? 'PUT' : 'POST';
+      
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+      
+      const data = await res.json();
+      if (data.Success) {
+        setShowModal(false);
+        fetchUsers();
+      } else {
+        alert(data.Message || 'Error al guardar');
+      }
+    } catch (error) {
+      console.error('Error saving user:', error);
+      alert('Error al guardar el usuario');
+    }
+  };
+
+  const handleDelete = async (userId: number) => {
+    if (!confirm('¿Está seguro de eliminar este usuario?')) return;
+    
+    try {
+      const res = await fetch(`/api/users?id=${userId}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (data.Success) {
+        fetchUsers();
+      } else {
+        alert(data.Message || 'Error al eliminar');
+      }
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      alert('Error al eliminar el usuario');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -971,7 +1059,10 @@ function UsersView() {
           <h2 className="text-2xl font-bold text-gray-800">Usuarios</h2>
           <p className="text-gray-500">Gestión de usuarios y permisos</p>
         </div>
-        <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
+        <button 
+          onClick={handleAddNew}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+        >
           <span>+</span> Nuevo Usuario
         </button>
       </div>
@@ -1013,7 +1104,18 @@ function UsersView() {
                       </span>
                     </td>
                     <td className="py-3 px-4 text-center">
-                      <button className="text-blue-600 hover:text-blue-800 mr-2">Editar</button>
+                      <button 
+                        onClick={() => handleEdit(user)}
+                        className="text-blue-600 hover:text-blue-800 mr-2"
+                      >
+                        Editar
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(user.UserId)}
+                        className="text-red-600 hover:text-red-800"
+                      >
+                        Eliminar
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -1022,6 +1124,134 @@ function UsersView() {
           </table>
         )}
       </div>
+
+      {/* Modal for Add/Edit */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-xl font-bold text-gray-800">
+                {editingUser ? 'Editar Usuario' : 'Nuevo Usuario'}
+              </h3>
+            </div>
+            <form onSubmit={handleSave} className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Usuario</label>
+                  <input
+                    type="text"
+                    value={formData.Username}
+                    onChange={(e) => setFormData({ ...formData, Username: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Contraseña {editingUser && '(dejar vacío para mantener)'}
+                  </label>
+                  <input
+                    type="password"
+                    value={formData.Password}
+                    onChange={(e) => setFormData({ ...formData, Password: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    required={!editingUser}
+                    placeholder={editingUser ? '••••••••' : ''}
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+                  <input
+                    type="text"
+                    value={formData.FirstName}
+                    onChange={(e) => setFormData({ ...formData, FirstName: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Apellido</label>
+                  <input
+                    type="text"
+                    value={formData.LastName}
+                    onChange={(e) => setFormData({ ...formData, LastName: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={formData.Email}
+                  onChange={(e) => setFormData({ ...formData, Email: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+                <input
+                  type="text"
+                  value={formData.Phone}
+                  onChange={(e) => setFormData({ ...formData, Phone: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  placeholder="+58 412 1234567"
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center mt-6">
+                  <input
+                    type="checkbox"
+                    id="isActive"
+                    checked={formData.IsActive}
+                    onChange={(e) => setFormData({ ...formData, IsActive: e.target.checked })}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded"
+                  />
+                  <label htmlFor="isActive" className="ml-2 text-sm text-gray-700">
+                    Usuario Activo
+                  </label>
+                </div>
+                <div className="flex items-center mt-6">
+                  <input
+                    type="checkbox"
+                    id="isBlocked"
+                    checked={formData.IsBlocked}
+                    onChange={(e) => setFormData({ ...formData, IsBlocked: e.target.checked })}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded"
+                  />
+                  <label htmlFor="isBlocked" className="ml-2 text-sm text-gray-700">
+                    Usuario Bloqueado
+                  </label>
+                </div>
+              </div>
+              
+              <div className="flex justify-end gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+                >
+                  {editingUser ? 'Guardar Cambios' : 'Crear Usuario'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
