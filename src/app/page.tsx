@@ -1170,12 +1170,18 @@ function JournalView() {
   const [showModal, setShowModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<any>(null);
+  const [showAccountSearch, setShowAccountSearch] = useState(false);
+  const [accountSearchQuery, setAccountSearchQuery] = useState("");
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [activeLineIndex, setActiveLineIndex] = useState(0);
+  const [activeField, setActiveField] = useState<'account' | 'description' | 'debit' | 'credit'>('account');
+  
   const [formData, setFormData] = useState({
     EntryType: "DAILY",
     EntryDate: new Date().toISOString().split('T')[0],
     Description: "",
     Reference: "",
-    Lines: [{ AccountId: 0, Description: "", Debit: 0, Credit: 0 }]
+    Lines: [{ AccountId: 0, AccountCode: "", AccountName: "", Description: "", Debit: 0, Credit: 0 }]
   });
 
   const fetchEntries = useCallback(async () => {
@@ -1283,6 +1289,195 @@ function JournalView() {
       case 'ADJUSTMENT': return 'Ajuste';
       case 'CLOSING': return 'Cierre';
       default: return type;
+    }
+  };
+
+  // Fetch accounts for search
+  const fetchAccounts = async () => {
+    try {
+      const res = await fetch('/api/accounts');
+      const data = await res.json();
+      if (data.Success) {
+        setAccounts(data.Data || []);
+      }
+    } catch (error) {
+      console.error("Error fetching accounts:", error);
+    }
+  };
+
+  // Open account search modal
+  const openAccountSearch = (lineIndex: number) => {
+    setActiveLineIndex(lineIndex);
+    setAccountSearchQuery("");
+    fetchAccounts();
+    setShowAccountSearch(true);
+  };
+
+  // Select account from search
+  const selectAccount = (account: any) => {
+    const newLines = [...formData.Lines];
+    newLines[activeLineIndex] = {
+      ...newLines[activeLineIndex],
+      AccountId: account.AccountId,
+      AccountCode: account.Code,
+      AccountName: account.Name
+    };
+    setFormData(prev => ({ ...prev, Lines: newLines }));
+    setShowAccountSearch(false);
+    setActiveField('description');
+  };
+
+  // Filtered accounts based on search
+  const filteredAccounts = accounts.filter(acc =>
+    acc.Code.toLowerCase().includes(accountSearchQuery.toLowerCase()) ||
+    acc.Name.toLowerCase().includes(accountSearchQuery.toLowerCase())
+  );
+
+  // Handle line change
+  const handleLineChange = (index: number, field: string, value: any) => {
+    const newLines = [...formData.Lines];
+    newLines[index] = { ...newLines[index], [field]: value };
+    setFormData(prev => ({ ...prev, Lines: newLines }));
+    
+    // Auto-add new line if last line has data and is not balanced
+    const totalDebit = newLines.reduce((sum, l) => sum + (parseFloat(String(l.Debit)) || 0), 0);
+    const totalCredit = newLines.reduce((sum, l) => sum + (parseFloat(String(l.Credit)) || 0), 0);
+    const lastLine = newLines[newLines.length - 1];
+    const lastLineHasData = lastLine.AccountId > 0 || lastLine.Description || lastLine.Debit > 0 || lastLine.Credit > 0;
+    
+    if (index === newLines.length - 1 && lastLineHasData && Math.abs(totalDebit - totalCredit) > 0.01) {
+      // Add new empty line automatically
+      setTimeout(() => {
+        setFormData(prev => ({
+          ...prev,
+          Lines: [...prev.Lines, { AccountId: 0, AccountCode: "", AccountName: "", Description: "", Debit: 0, Credit: 0 }]
+        }));
+      }, 100);
+    }
+  };
+
+  // Handle keyboard navigation in the entry form
+  const handleKeyDown = (e: React.KeyboardEvent, lineIndex: number, field: string) => {
+    const totalLines = formData.Lines.length;
+    const totalDebit = formData.Lines.reduce((sum, l) => sum + (parseFloat(String(l.Debit)) || 0), 0);
+    const totalCredit = formData.Lines.reduce((sum, l) => sum + (parseFloat(String(l.Credit)) || 0), 0);
+    const isBalanced = Math.abs(totalDebit - totalCredit) <= 0.01;
+    
+    // Enter: move to next field or add new line
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (field === 'credit' && lineIndex === totalLines - 1) {
+        if (!isBalanced) {
+          // Add new line if not balanced
+          setFormData(prev => ({
+            ...prev,
+            Lines: [...prev.Lines, { AccountId: 0, AccountCode: "", AccountName: "", Description: "", Debit: 0, Credit: 0 }]
+          }));
+        }
+      } else if (field === 'credit' && lineIndex < totalLines - 1) {
+        // Move to next line
+        const nextElement = document.querySelector(`[data-line="${lineIndex + 1}"][data-field="account"]`) as HTMLInputElement;
+        nextElement?.focus();
+      }
+    }
+    
+    // Ctrl+B: Balance the entry (show alert)
+    if (e.ctrlKey && e.key === 'b') {
+      e.preventDefault();
+      if (!isBalanced) {
+        const diff = totalDebit - totalCredit;
+        alert(`El asiento no está cuadrado. Diferencia: ${formatCurrency(Math.abs(diff))}`);
+      }
+    }
+    
+    // Ctrl+S: Save
+    if (e.ctrlKey && e.key === 's') {
+      e.preventDefault();
+      if (isBalanced) {
+        document.getElementById('save-entry-btn')?.click();
+      }
+    }
+    
+    // F2: Open account search
+    if (e.key === 'F2') {
+      e.preventDefault();
+      openAccountSearch(lineIndex);
+    }
+    
+    // Escape: Close modal
+    if (e.key === 'Escape') {
+      setShowModal(false);
+    }
+  };
+
+  // Add line manually
+  const addLine = () => {
+    setFormData(prev => ({
+      ...prev,
+      Lines: [...prev.Lines, { AccountId: 0, AccountCode: "", AccountName: "", Description: "", Debit: 0, Credit: 0 }]
+    }));
+  };
+
+  // Remove line
+  const removeLine = (index: number) => {
+    if (formData.Lines.length > 1) {
+      const newLines = formData.Lines.filter((_, i) => i !== index);
+      setFormData(prev => ({ ...prev, Lines: newLines }));
+    }
+  };
+
+  // Calculate totals
+  const totalDebit = formData.Lines.reduce((sum, line) => sum + (parseFloat(String(line.Debit)) || 0), 0);
+  const totalCredit = formData.Lines.reduce((sum, line) => sum + (parseFloat(String(line.Credit)) || 0), 0);
+  const isBalanced = Math.abs(totalDebit - totalCredit) <= 0.01;
+  const difference = totalDebit - totalCredit;
+
+  // Handle save
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!isBalanced) {
+      alert("El asiento debe estar cuadrado (Débito = Crédito)");
+      return;
+    }
+
+    // Prepare data for API
+    const apiData = {
+      EntryType: formData.EntryType,
+      EntryDate: formData.EntryDate,
+      Description: formData.Description,
+      Reference: formData.Reference,
+      Lines: formData.Lines.filter(l => l.AccountId > 0).map(l => ({
+        AccountId: l.AccountId,
+        Description: l.Description,
+        Debit: parseFloat(String(l.Debit)) || 0,
+        Credit: parseFloat(String(l.Credit)) || 0
+      }))
+    };
+
+    try {
+      const res = await fetch('/api/journal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(apiData)
+      });
+      const data = await res.json();
+      if (data.Success) {
+        setShowModal(false);
+        setFormData({
+          EntryType: "DAILY",
+          EntryDate: new Date().toISOString().split('T')[0],
+          Description: "",
+          Reference: "",
+          Lines: [{ AccountId: 0, AccountCode: "", AccountName: "", Description: "", Debit: 0, Credit: 0 }]
+        });
+        fetchEntries();
+      } else {
+        alert(data.Message || "Error al guardar el asiento");
+      }
+    } catch (error) {
+      console.error("Error saving entry:", error);
+      alert("Error al guardar el asiento");
     }
   };
 
@@ -1439,6 +1634,301 @@ function JournalView() {
               <p className="font-semibold mb-2">Totales:</p>
               <p>Total Debe: {formatCurrency(selectedEntry.TotalDebit)}</p>
               <p>Total Haber: {formatCurrency(selectedEntry.TotalCredit)}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* New Entry Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[95vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="p-4 border-b border-gray-200 bg-blue-600 text-white rounded-t-xl">
+              <div className="flex justify-between items-center">
+                <h3 className="text-xl font-bold">Nuevo Asiento Contable</h3>
+                <button onClick={() => setShowModal(false)} className="text-white hover:text-gray-200 text-2xl">✕</button>
+              </div>
+              <p className="text-blue-100 text-sm mt-1">Atajos: Enter=Siguiente campo | F2=Buscar cuenta | Ctrl+S=Guardar | Ctrl+B=Verificar balance | Esc=Cerrar</p>
+            </div>
+            
+            {/* Form */}
+            <form onSubmit={handleSave} className="flex-1 overflow-hidden flex flex-col">
+              {/* Header fields */}
+              <div className="p-4 bg-gray-50 border-b">
+                <div className="grid grid-cols-6 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Tipo</label>
+                    <select
+                      value={formData.EntryType}
+                      onChange={(e) => setFormData({ ...formData, EntryType: e.target.value })}
+                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
+                    >
+                      <option value="DAILY">Diario</option>
+                      <option value="INCOME">Ingreso</option>
+                      <option value="EXPENSE">Egreso</option>
+                      <option value="ADJUSTMENT">Ajuste</option>
+                      <option value="CLOSING">Cierre</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Fecha</label>
+                    <input
+                      type="date"
+                      value={formData.EntryDate}
+                      onChange={(e) => setFormData({ ...formData, EntryDate: e.target.value })}
+                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
+                      required
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Descripción</label>
+                    <input
+                      type="text"
+                      value={formData.Description}
+                      onChange={(e) => setFormData({ ...formData, Description: e.target.value })}
+                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
+                      placeholder="Descripción del asiento"
+                      required
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Referencia</label>
+                    <input
+                      type="text"
+                      value={formData.Reference}
+                      onChange={(e) => setFormData({ ...formData, Reference: e.target.value })}
+                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
+                      placeholder="Número de referencia"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Lines - Scrollable */}
+              <div className="flex-1 overflow-y-auto p-4">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-100 sticky top-0">
+                    <tr>
+                      <th className="text-left py-2 px-2 font-medium text-gray-600 w-8">#</th>
+                      <th className="text-left py-2 px-2 font-medium text-gray-600 w-24">Código</th>
+                      <th className="text-left py-2 px-2 font-medium text-gray-600">Cuenta</th>
+                      <th className="text-left py-2 px-2 font-medium text-gray-600">Descripción</th>
+                      <th className="text-right py-2 px-2 font-medium text-gray-600 w-28">Debe</th>
+                      <th className="text-right py-2 px-2 font-medium text-gray-600 w-28">Haber</th>
+                      <th className="w-8"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {formData.Lines.map((line, index) => (
+                      <tr key={index} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50`}>
+                        <td className="py-1 px-2 text-gray-400 text-xs">{index + 1}</td>
+                        <td className="py-1 px-1">
+                          <div className="flex gap-1">
+                            <input
+                              type="text"
+                              value={line.AccountCode}
+                              onChange={(e) => handleLineChange(index, 'AccountCode', e.target.value)}
+                              onFocus={() => setActiveField('account')}
+                              onKeyDown={(e) => handleKeyDown(e, index, 'account')}
+                              data-line={index}
+                              data-field="account"
+                              className="w-full px-1 py-1 border border-gray-300 rounded text-xs font-mono"
+                              placeholder="Código"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => openAccountSearch(index)}
+                              className="px-1 py-1 bg-gray-100 hover:bg-gray-200 rounded text-xs"
+                              title="Buscar cuenta (F2)"
+                            >
+                              🔍
+                            </button>
+                          </div>
+                        </td>
+                        <td className="py-1 px-1">
+                          <input
+                            type="text"
+                            value={line.AccountName}
+                            readOnly
+                            className="w-full px-1 py-1 bg-gray-100 border border-gray-200 rounded text-xs text-gray-500"
+                            placeholder="Nombre de cuenta"
+                          />
+                        </td>
+                        <td className="py-1 px-1">
+                          <input
+                            type="text"
+                            value={line.Description}
+                            onChange={(e) => handleLineChange(index, 'Description', e.target.value)}
+                            onFocus={() => setActiveField('description')}
+                            onKeyDown={(e) => handleKeyDown(e, index, 'description')}
+                            data-line={index}
+                            data-field="description"
+                            className="w-full px-1 py-1 border border-gray-300 rounded text-xs"
+                            placeholder="Detalle"
+                          />
+                        </td>
+                        <td className="py-1 px-1">
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={line.Debit || ''}
+                            onChange={(e) => handleLineChange(index, 'Debit', parseFloat(e.target.value) || 0)}
+                            onFocus={() => setActiveField('debit')}
+                            onKeyDown={(e) => handleKeyDown(e, index, 'debit')}
+                            data-line={index}
+                            data-field="debit"
+                            className="w-full px-1 py-1 border border-gray-300 rounded text-xs text-right font-mono"
+                            placeholder="0.00"
+                          />
+                        </td>
+                        <td className="py-1 px-1">
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={line.Credit || ''}
+                            onChange={(e) => handleLineChange(index, 'Credit', parseFloat(e.target.value) || 0)}
+                            onFocus={() => setActiveField('credit')}
+                            onKeyDown={(e) => handleKeyDown(e, index, 'credit')}
+                            data-line={index}
+                            data-field="credit"
+                            className="w-full px-1 py-1 border border-gray-300 rounded text-xs text-right font-mono"
+                            placeholder="0.00"
+                          />
+                        </td>
+                        <td className="py-1 px-1 text-center">
+                          <button
+                            type="button"
+                            onClick={() => removeLine(index)}
+                            disabled={formData.Lines.length === 1}
+                            className="text-red-500 hover:text-red-700 disabled:text-gray-300 disabled:cursor-not-allowed"
+                          >
+                            ✕
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                
+                {/* Add line button */}
+                <button
+                  type="button"
+                  onClick={addLine}
+                  className="mt-2 text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                >
+                  + Agregar línea
+                </button>
+              </div>
+
+              {/* Footer with totals */}
+              <div className="p-4 border-t bg-gray-50">
+                <div className="flex justify-between items-center">
+                  <div className="flex gap-4">
+                    <span className={`text-lg font-bold ${isBalanced ? 'text-green-600' : 'text-red-600'}`}>
+                      {isBalanced ? '✓ CUADRADO' : '✕ DESCUADRADO'}
+                    </span>
+                    {!isBalanced && (
+                      <span className="text-red-600">
+                        Diferencia: {formatCurrency(Math.abs(difference))}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex gap-8 text-right">
+                    <div>
+                      <span className="text-xs text-gray-500 block">Total Debe</span>
+                      <span className={`text-lg font-bold ${isBalanced ? 'text-green-600' : 'text-red-600'}`}>
+                        {formatCurrency(totalDebit)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-xs text-gray-500 block">Total Haber</span>
+                      <span className={`text-lg font-bold ${isBalanced ? 'text-green-600' : 'text-red-600'}`}>
+                        {formatCurrency(totalCredit)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Action buttons */}
+                <div className="flex justify-end gap-3 mt-4 pt-4 border-t">
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100"
+                  >
+                    Cancelar (Esc)
+                  </button>
+                  <button
+                    type="submit"
+                    id="save-entry-btn"
+                    disabled={!isBalanced}
+                    className={`px-6 py-2 rounded-lg font-medium ${isBalanced ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+                  >
+                    Guardar Asiento (Ctrl+S)
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Account Search Modal */}
+      {showAccountSearch && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden">
+            <div className="p-4 border-b border-gray-200">
+              <h3 className="text-lg font-bold text-gray-800">Buscar Cuenta del Plan de Cuentas</h3>
+              <input
+                type="text"
+                value={accountSearchQuery}
+                onChange={(e) => setAccountSearchQuery(e.target.value)}
+                placeholder="Buscar por código o nombre..."
+                className="w-full mt-2 px-3 py-2 border border-gray-300 rounded-lg"
+                autoFocus
+              />
+              <p className="text-xs text-gray-500 mt-1">Presiona Enter para seleccionar, Esc para cancelar</p>
+            </div>
+            <div className="overflow-y-auto max-h-[60vh]">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 sticky top-0">
+                  <tr>
+                    <th className="text-left py-2 px-4 font-medium text-gray-600">Código</th>
+                    <th className="text-left py-2 px-4 font-medium text-gray-600">Nombre</th>
+                    <th className="text-left py-2 px-4 font-medium text-gray-600">Tipo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredAccounts.length === 0 ? (
+                    <tr>
+                      <td colSpan={3} className="py-8 text-center text-gray-500">
+                        {accounts.length === 0 ? 'Cargando cuentas...' : 'No se encontraron cuentas'}
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredAccounts.map((account) => (
+                      <tr
+                        key={account.AccountId}
+                        onClick={() => selectAccount(account)}
+                        className="border-b border-gray-100 hover:bg-blue-50 cursor-pointer"
+                      >
+                        <td className="py-2 px-4 font-mono text-blue-600">{account.Code}</td>
+                        <td className="py-2 px-4">{account.Name}</td>
+                        <td className="py-2 px-4 text-gray-500">{account.AccountType}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <div className="p-3 border-t bg-gray-50">
+              <button
+                onClick={() => setShowAccountSearch(false)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100"
+              >
+                Cancelar (Esc)
+              </button>
             </div>
           </div>
         </div>
