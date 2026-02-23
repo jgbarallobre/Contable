@@ -8,6 +8,7 @@ El proyecto es un sistema completo de contabilidad para Venezuela con SQL Server
 
 ## Recently Completed
 
+- [x] Fix: React warning - unique key prop en AccountsView list rendering
 - [x] Implementar JournalView con API -获取asientos contables, paginación, filtros, aprobar/anular
 - [x] Debug de autenticación: Agregar logging y endpoint de prueba para diagnosticar error de contraseña incorrecta
 - [x] Fix en mensajes de login para diferenciar usuario vs contraseña incorrecta
@@ -113,6 +114,7 @@ El proyecto es un sistema completo de contabilidad para Venezuela con SQL Server
 
 | Date | Changes |
 |------|---------|
+| 2026-02-23 | Fix: React unique key warning in AccountsView list |
 | 2026-02-23 | Implementar JournalView con API - fetch entries, pagination, filters, approve/annul actions |
 | 2026-02-22 | Debug de autenticación: Agregar logging y endpoint de prueba para diagnosticar error de contraseña |
 | 2026-02-22 | Fix en mensajes de login para diferenciar usuario vs contraseña incorrecta |
