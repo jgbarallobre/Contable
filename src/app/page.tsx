@@ -28,6 +28,12 @@ export default function Home() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  
+  // Company selection state
+  const [companies, setCompanies] = useState<any[]>([]);
+  const [selectedCompany, setSelectedCompany] = useState<any>(null);
+  const [showCompanySelector, setShowCompanySelector] = useState(false);
+  const [loadingCompanies, setLoadingCompanies] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,6 +51,8 @@ export default function Home() {
 
       if (data.Success) {
         setIsLoggedIn(true);
+        // Fetch companies after successful login
+        fetchCompanies();
       } else {
         setError(data.Message || "Error al iniciar sesión");
       }
@@ -53,6 +61,30 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchCompanies = async () => {
+    setLoadingCompanies(true);
+    try {
+      const res = await fetch("/api/companies");
+      const data = await res.json();
+      if (data.Success && data.Data && data.Data.length > 0) {
+        setCompanies(data.Data);
+        // Auto-select first company if none selected
+        if (!selectedCompany) {
+          setSelectedCompany(data.Data[0]);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching companies:", error);
+    } finally {
+      setLoadingCompanies(false);
+    }
+  };
+
+  const handleSelectCompany = (company: any) => {
+    setSelectedCompany(company);
+    setShowCompanySelector(false);
   };
 
   const renderContent = () => {
@@ -139,9 +171,53 @@ export default function Home() {
     <div className="flex h-screen bg-gray-100">
       {/* Sidebar */}
       <aside className="w-64 bg-white shadow-lg flex flex-col">
+        {/* Company Selector */}
         <div className="p-4 border-b border-gray-200">
           <h1 className="text-xl font-bold text-blue-800">Contabilidad VE</h1>
           <p className="text-xs text-gray-500">Sistema Contable</p>
+          
+          {/* Company Selection Button */}
+          <div className="mt-3 relative">
+            <button
+              onClick={() => setShowCompanySelector(!showCompanySelector)}
+              className="w-full flex items-center justify-between px-3 py-2 bg-blue-50 hover:bg-blue-100 rounded-lg border border-blue-200 transition"
+            >
+              <div className="flex items-center gap-2 overflow-hidden">
+                <span className="text-lg">🏢</span>
+                <span className="text-sm font-medium text-blue-800 truncate">
+                  {selectedCompany ? selectedCompany.CompanyName : "Seleccionar Empresa"}
+                </span>
+              </div>
+              <span className="text-blue-600 text-xs">▼</span>
+            </button>
+            
+            {/* Company Dropdown */}
+            {showCompanySelector && (
+              <div className="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
+                {loadingCompanies ? (
+                  <div className="p-3 text-sm text-gray-500 text-center">Cargando...</div>
+                ) : companies.length === 0 ? (
+                  <div className="p-3 text-sm text-gray-500 text-center">No hay empresas</div>
+                ) : (
+                  companies.map((company) => (
+                    <button
+                      key={company.CompanyId}
+                      onClick={() => handleSelectCompany(company)}
+                      className={`w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-100 text-left ${
+                        selectedCompany?.CompanyId === company.CompanyId ? "bg-blue-50" : ""
+                      }`}
+                    >
+                      <span>🏢</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-800 truncate">{company.CompanyName}</p>
+                        <p className="text-xs text-gray-500 truncate">{company.TaxId}</p>
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
         </div>
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {menuItems.map((item) => (
@@ -172,6 +248,27 @@ export default function Home() {
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto p-8">
+        {/* Company Header Bar */}
+        {selectedCompany && (
+          <div className="mb-6 bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl p-4 text-white shadow-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">🏢</span>
+                <div>
+                  <h2 className="text-lg font-bold">{selectedCompany.CompanyName}</h2>
+                  <p className="text-sm text-blue-100">{selectedCompany.TaxId} • {selectedCompany.Currency}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowCompanySelector(true)}
+                className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition flex items-center gap-2"
+              >
+                <span>Cambiar</span>
+                <span>🔄</span>
+              </button>
+            </div>
+          </div>
+        )}
         <div className="max-w-7xl mx-auto">
           {renderContent()}
         </div>
