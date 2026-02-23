@@ -1333,8 +1333,8 @@ function JournalView() {
 
   // Filtered accounts based on search
   const filteredAccounts = accounts.filter(acc =>
-    acc.Code.toLowerCase().includes(accountSearchQuery.toLowerCase()) ||
-    acc.Name.toLowerCase().includes(accountSearchQuery.toLowerCase())
+    acc.Code?.toString().toLowerCase().includes(accountSearchQuery.toLowerCase()) ||
+    acc.Name?.toString().toLowerCase().includes(accountSearchQuery.toLowerCase())
   );
 
   // Handle line change
