@@ -628,6 +628,203 @@ function CompaniesView() {
 
 // ==================== ACCOUNTS VIEW ====================
 function AccountsView() {
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<any>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [formData, setFormData] = useState({
+    AccountCode: "",
+    AccountName: "",
+    Nature: "D",
+    AccountType: "Detalle",
+    ParentAccountId: null as number | null,
+    IsMovementsRequired: false,
+    RequiresThirdParty: false,
+    AllowsManualEntry: true,
+    Currency: "VES",
+    IsCashFlowItem: false,
+    IsActive: true,
+  });
+
+  useEffect(() => {
+    fetchAccounts();
+  }, []);
+
+  const fetchAccounts = async () => {
+    try {
+      const res = await fetch("/api/accounts");
+      const data = await res.json();
+      if (data.Success) {
+        setAccounts(data.Data || []);
+      }
+    } catch (error) {
+      console.error("Error fetching accounts:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddNew = () => {
+    setEditingAccount(null);
+    setFormData({
+      AccountCode: "",
+      AccountName: "",
+      Nature: "D",
+      AccountType: "Detalle",
+      ParentAccountId: null,
+      IsMovementsRequired: false,
+      RequiresThirdParty: false,
+      AllowsManualEntry: true,
+      Currency: "VES",
+      IsCashFlowItem: false,
+      IsActive: true,
+    });
+    setShowModal(true);
+  };
+
+  const handleEdit = (account: any) => {
+    setEditingAccount(account);
+    setFormData({
+      AccountCode: account.AccountCode || "",
+      AccountName: account.AccountName || "",
+      Nature: account.Nature || "D",
+      AccountType: account.AccountType || "Detalle",
+      ParentAccountId: account.ParentAccountId || null,
+      IsMovementsRequired: account.IsMovementsRequired || false,
+      RequiresThirdParty: account.RequiresThirdParty || false,
+      AllowsManualEntry: account.AllowsManualEntry !== false,
+      Currency: account.Currency || "VES",
+      IsCashFlowItem: account.IsCashFlowItem || false,
+      IsActive: account.IsActive ?? true,
+    });
+    setShowModal(true);
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const url = editingAccount
+        ? `/api/accounts?id=${editingAccount.AccountId}`
+        : "/api/accounts";
+      const method = editingAccount ? "PUT" : "POST";
+      
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editingAccount ? { AccountId: editingAccount.AccountId, ...formData } : formData),
+      });
+      
+      const data = await res.json();
+      if (data.Success) {
+        setShowModal(false);
+        fetchAccounts();
+      } else {
+        alert(data.Message || "Error al guardar");
+      }
+    } catch (error) {
+      console.error("Error saving account:", error);
+      alert("Error al guardar la cuenta");
+    }
+  };
+
+  const handleDelete = async (accountId: number) => {
+    if (!confirm("¿Está seguro de eliminar esta cuenta?")) return;
+    
+    try {
+      const res = await fetch(`/api/accounts?accountId=${accountId}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (data.Success) {
+        fetchAccounts();
+      } else {
+        alert(data.Message || "Error al eliminar");
+      }
+    } catch (error) {
+      console.error("Error deleting account:", error);
+      alert("Error al eliminar la cuenta");
+    }
+  };
+
+  // Filter accounts by search term
+  const filteredAccounts = accounts.filter(account =>
+    account.AccountCode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    account.AccountName?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Build tree structure
+  const buildTree = (accounts: any[]) => {
+    const map: Record<number, any> = {};
+    const roots: any[] = [];
+    
+    accounts.forEach(account => {
+      map[account.AccountId] = { ...account, children: [] };
+    });
+    
+    accounts.forEach(account => {
+      if (account.ParentAccountId && map[account.ParentAccountId]) {
+        map[account.ParentAccountId].children.push(map[account.AccountId]);
+      } else {
+        roots.push(map[account.AccountId]);
+      }
+    });
+    
+    return roots;
+  };
+
+  const renderAccountRow = (account: any, level: number = 0) => {
+    const indent = level * 4;
+    return (
+      <>
+        <tr key={account.AccountId} className="border-b border-gray-100 hover:bg-gray-50">
+          <td className="py-3 px-4">
+            <span style={{ marginLeft: `${indent}px` }} className="font-mono text-sm">
+              {account.AccountCode}
+            </span>
+          </td>
+          <td className="py-3 px-4">{account.AccountName}</td>
+          <td className="py-3 px-4">
+            <span className={`px-2 py-1 rounded-full text-xs ${
+              account.Nature === 'D' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'
+            }`}>
+              {account.Nature === 'D' ? 'D - Debe' : 'H - Haber'}
+            </span>
+          </td>
+          <td className="py-3 px-4 text-center">
+            <span className={`px-2 py-1 rounded-full text-xs ${account.AccountType === 'Rubro' ? 'bg-purple-100 text-purple-700' : account.AccountType === 'Subrubro' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}`}>
+              {account.AccountType}
+            </span>
+          </td>
+          <td className="py-3 px-4 text-center">
+            <span className={`px-2 py-1 rounded-full text-xs ${account.IsActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+              {account.IsActive ? 'Activa' : 'Inactiva'}
+            </span>
+          </td>
+          <td className="py-3 px-4 text-center">
+            <button 
+              onClick={() => handleEdit(account)}
+              className="text-blue-600 hover:text-blue-800 mr-2"
+            >
+              Editar
+            </button>
+            <button 
+              onClick={() => handleDelete(account.AccountId)}
+              className="text-red-600 hover:text-red-800"
+            >
+              Eliminar
+            </button>
+          </td>
+        </tr>
+        {account.children?.map((child: any) => renderAccountRow(child, level + 1))}
+      </>
+    );
+  };
+
+  if (loading) {
+    return <div className="p-8 text-center text-gray-500">Cargando...</div>;
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -635,7 +832,10 @@ function AccountsView() {
           <h2 className="text-2xl font-bold text-gray-800">Plan de Cuentas</h2>
           <p className="text-gray-500">Estructura contable de la empresa</p>
         </div>
-        <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
+        <button 
+          onClick={handleAddNew}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+        >
           <span>+</span> Nueva Cuenta
         </button>
       </div>
@@ -644,55 +844,220 @@ function AccountsView() {
         <div className="p-4 border-b border-gray-100">
           <input
             type="text"
-            placeholder="Buscar cuenta..."
+            placeholder="Buscar cuenta por código o nombre..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg"
           />
         </div>
-        <div className="p-4">
-          <div className="space-y-2">
-            <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg font-semibold">
-              <span className="w-24">1</span>
-              <span>ACTIVOS</span>
-            </div>
-            <div className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-lg ml-4">
-              <span className="w-24">1.1</span>
-              <span>1.1 - ACTIVO CORRIENTE</span>
-            </div>
-            <div className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-lg ml-8">
-              <span className="w-24">1.1.01</span>
-              <span>1.1.01 - Caja</span>
-            </div>
-            <div className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-lg ml-8">
-              <span className="w-24">1.1.02</span>
-              <span>1.1.02 - Bancos</span>
-            </div>
-            <div className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-lg ml-4">
-              <span className="w-24">1.2</span>
-              <span>1.2 - ACTIVO NO CORRIENTE</span>
-            </div>
-            <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg font-semibold mt-4">
-              <span className="w-24">2</span>
-              <span>PASIVOS</span>
-            </div>
-            <div className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-lg ml-4">
-              <span className="w-24">2.1</span>
-              <span>2.1 - PASIVO CORRIENTE</span>
-            </div>
-            <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg font-semibold mt-4">
-              <span className="w-24">3</span>
-              <span>PATRIMONIO</span>
-            </div>
-            <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg font-semibold mt-4">
-              <span className="w-24">4</span>
-              <span>INGRESOS</span>
-            </div>
-            <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg font-semibold mt-4">
-              <span className="w-24">5</span>
-              <span>GASTOS</span>
-            </div>
-          </div>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="text-left py-3 px-4 font-semibold text-gray-600">Código</th>
+                <th className="text-left py-3 px-4 font-semibold text-gray-600">Nombre</th>
+                <th className="text-left py-3 px-4 font-semibold text-gray-600">Naturaleza</th>
+                <th className="text-center py-3 px-4 font-semibold text-gray-600">Tipo</th>
+                <th className="text-center py-3 px-4 font-semibold text-gray-600">Estado</th>
+                <th className="text-center py-3 px-4 font-semibold text-gray-600">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredAccounts.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-gray-500">
+                    No hay cuentas registradas. Haga clic en &quot;Nueva Cuenta&quot; para agregar una.
+                  </td>
+                </tr>
+              ) : (
+                filteredAccounts.map((account) => renderAccountRow(account, 0))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
+
+      {/* Modal for Add/Edit */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-xl font-bold text-gray-800">
+                {editingAccount ? "Editar Cuenta" : "Nueva Cuenta"}
+              </h3>
+            </div>
+            <form onSubmit={handleSave} className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Código</label>
+                  <input
+                    type="text"
+                    value={formData.AccountCode}
+                    onChange={(e) => setFormData({ ...formData, AccountCode: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    placeholder="1.1.01"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+                  <input
+                    type="text"
+                    value={formData.AccountName}
+                    onChange={(e) => setFormData({ ...formData, AccountName: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    placeholder="Caja General"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Naturaleza</label>
+                  <select
+                    value={formData.Nature}
+                    onChange={(e) => setFormData({ ...formData, Nature: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    required
+                  >
+                    <option value="D">D - Debe</option>
+                    <option value="H">H - Haber</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Cuenta</label>
+                  <select
+                    value={formData.AccountType}
+                    onChange={(e) => setFormData({ ...formData, AccountType: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                    required
+                  >
+                    <option value="Rubro">Rubro</option>
+                    <option value="Subrubro">Subrubro</option>
+                    <option value="Detalle">Detalle</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Cuenta Padre</label>
+                  <select
+                    value={formData.ParentAccountId || ""}
+                    onChange={(e) => setFormData({ ...formData, ParentAccountId: e.target.value ? parseInt(e.target.value) : null })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  >
+                    <option value="">Sin padre (Raíz)</option>
+                    {accounts.filter(a => a.AccountType !== 'Detalle').map((account) => (
+                      <option key={account.AccountId} value={account.AccountId}>
+                        {account.AccountCode} - {account.AccountName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Moneda</label>
+                  <select
+                    value={formData.Currency}
+                    onChange={(e) => setFormData({ ...formData, Currency: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                  >
+                    <option value="VES">VES - Bolívar</option>
+                    <option value="USD">USD - Dólar</option>
+                    <option value="EUR">EUR - Euro</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="IsMovementsRequired"
+                    checked={formData.IsMovementsRequired}
+                    onChange={(e) => setFormData({ ...formData, IsMovementsRequired: e.target.checked })}
+                    className="w-4 h-4"
+                  />
+                  <label htmlFor="IsMovementsRequired" className="text-sm text-gray-700">
+                    Requiere movimientos
+                  </label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="RequiresThirdParty"
+                    checked={formData.RequiresThirdParty}
+                    onChange={(e) => setFormData({ ...formData, RequiresThirdParty: e.target.checked })}
+                    className="w-4 h-4"
+                  />
+                  <label htmlFor="RequiresThirdParty" className="text-sm text-gray-700">
+                    Requiere tercero
+                  </label>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="AllowsManualEntry"
+                    checked={formData.AllowsManualEntry}
+                    onChange={(e) => setFormData({ ...formData, AllowsManualEntry: e.target.checked })}
+                    className="w-4 h-4"
+                  />
+                  <label htmlFor="AllowsManualEntry" className="text-sm text-gray-700">
+                    Permite entrada manual
+                  </label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="IsCashFlowItem"
+                    checked={formData.IsCashFlowItem}
+                    onChange={(e) => setFormData({ ...formData, IsCashFlowItem: e.target.checked })}
+                    className="w-4 h-4"
+                  />
+                  <label htmlFor="IsCashFlowItem" className="text-sm text-gray-700">
+                    Es flujo de caja
+                  </label>
+                </div>
+              </div>
+
+              {editingAccount && (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="IsActive"
+                    checked={formData.IsActive}
+                    onChange={(e) => setFormData({ ...formData, IsActive: e.target.checked })}
+                    className="w-4 h-4"
+                  />
+                  <label htmlFor="IsActive" className="text-sm text-gray-700">
+                    Cuenta activa
+                  </label>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  {editingAccount ? "Actualizar" : "Crear"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
