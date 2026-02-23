@@ -1325,8 +1325,8 @@ function JournalView() {
     newLines[activeLineIndex] = {
       ...newLines[activeLineIndex],
       AccountId: account.AccountId,
-      AccountCode: account.Code,
-      AccountName: account.Name
+      AccountCode: account.AccountCode,
+      AccountName: account.AccountName
     };
     setFormData(prev => ({ ...prev, Lines: newLines }));
     setShowAccountSearch(false);
@@ -1335,8 +1335,8 @@ function JournalView() {
 
   // Filtered accounts based on search
   const filteredAccounts = accounts.filter(acc =>
-    acc.Code?.toString().toLowerCase().includes(accountSearchQuery.toLowerCase()) ||
-    acc.Name?.toString().toLowerCase().includes(accountSearchQuery.toLowerCase())
+    acc.AccountCode?.toString().toLowerCase().includes(accountSearchQuery.toLowerCase()) ||
+    acc.AccountName?.toString().toLowerCase().includes(accountSearchQuery.toLowerCase())
   );
 
   // Handle line change
