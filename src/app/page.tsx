@@ -185,7 +185,7 @@ export default function Home() {
               <div className="flex items-center gap-2 overflow-hidden">
                 <span className="text-lg">🏢</span>
                 <span className="text-sm font-medium text-blue-800 truncate">
-                  {selectedCompany ? selectedCompany.CompanyName : "Seleccionar Empresa"}
+                  {selectedCompany ? selectedCompany.LegalName : "Seleccionar Empresa"}
                 </span>
               </div>
               <span className="text-blue-600 text-xs">▼</span>
@@ -209,8 +209,8 @@ export default function Home() {
                     >
                       <span>🏢</span>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-800 truncate">{company.CompanyName}</p>
-                        <p className="text-xs text-gray-500 truncate">{company.TaxId}</p>
+                        <p className="text-sm font-medium text-gray-800 truncate">{company.LegalName}</p>
+                        <p className="text-xs text-gray-500 truncate">{company.RIF}</p>
                       </div>
                     </button>
                   ))
@@ -255,8 +255,8 @@ export default function Home() {
               <div className="flex items-center gap-3">
                 <span className="text-2xl">🏢</span>
                 <div>
-                  <h2 className="text-lg font-bold">{selectedCompany.CompanyName}</h2>
-                  <p className="text-sm text-blue-100">{selectedCompany.TaxId} • {selectedCompany.Currency}</p>
+                  <h2 className="text-lg font-bold">{selectedCompany.LegalName}</h2>
+                  <p className="text-sm text-blue-100">{selectedCompany.RIF} • {selectedCompany.FunctionalCurrency}</p>
                 </div>
               </div>
               <button
@@ -381,17 +381,16 @@ function CompaniesView() {
   const [showModal, setShowModal] = useState(false);
   const [editingCompany, setEditingCompany] = useState<any>(null);
   const [formData, setFormData] = useState({
-    CompanyCode: "",
-    CompanyName: "",
-    TaxId: "",
-    Address: "",
+    Code: "",
+    LegalName: "",
+    RIF: "",
+    FiscalAddress: "",
     Phone: "",
     Email: "",
-    Currency: "VES",
-    TaxConfig: {
-      ivaRate: 16,
-      igtfRate: 3,
-    },
+    Activity: "",
+    FunctionalCurrency: "VES",
+    IVAAliquot: 16,
+    IGTFAliquot: 3,
     IsActive: true,
   });
 
@@ -416,17 +415,16 @@ function CompaniesView() {
   const handleAddNew = () => {
     setEditingCompany(null);
     setFormData({
-      CompanyCode: "",
-      CompanyName: "",
-      TaxId: "",
-      Address: "",
+      Code: "",
+      LegalName: "",
+      RIF: "",
+      FiscalAddress: "",
       Phone: "",
       Email: "",
-      Currency: "VES",
-      TaxConfig: {
-        ivaRate: 16,
-        igtfRate: 3,
-      },
+      Activity: "",
+      FunctionalCurrency: "VES",
+      IVAAliquot: 16,
+      IGTFAliquot: 3,
       IsActive: true,
     });
     setShowModal(true);
@@ -435,14 +433,16 @@ function CompaniesView() {
   const handleEdit = (company: any) => {
     setEditingCompany(company);
     setFormData({
-      CompanyCode: company.CompanyCode || "",
-      CompanyName: company.CompanyName || "",
-      TaxId: company.TaxId || "",
-      Address: company.Address || "",
+      Code: company.Code || "",
+      LegalName: company.LegalName || "",
+      RIF: company.RIF || "",
+      FiscalAddress: company.FiscalAddress || "",
       Phone: company.Phone || "",
       Email: company.Email || "",
-      Currency: company.Currency || "VES",
-      TaxConfig: company.TaxConfig || { ivaRate: 16, igtfRate: 3 },
+      Activity: company.Activity || "",
+      FunctionalCurrency: company.FunctionalCurrency || "VES",
+      IVAAliquot: company.IVAAliquot || 16,
+      IGTFAliquot: company.IGTFAliquot || 3,
       IsActive: company.IsActive ?? true,
     });
     setShowModal(true);
@@ -535,10 +535,10 @@ function CompaniesView() {
             ) : (
               companies.map((company) => (
                 <tr key={company.CompanyId} className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="py-3 px-4">{company.CompanyCode}</td>
-                  <td className="py-3 px-4">{company.CompanyName}</td>
-                  <td className="py-3 px-4">{company.TaxId}</td>
-                  <td className="py-3 px-4">{company.Currency}</td>
+                  <td className="py-3 px-4">{company.Code}</td>
+                  <td className="py-3 px-4">{company.LegalName}</td>
+                  <td className="py-3 px-4">{company.RIF}</td>
+                  <td className="py-3 px-4">{company.FunctionalCurrency}</td>
                   <td className="py-3 px-4 text-center">
                     <span className={`px-2 py-1 rounded-full text-xs ${company.IsActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"}`}>
                       {company.IsActive ? "Activa" : "Inactiva"}
@@ -580,8 +580,8 @@ function CompaniesView() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Código</label>
                   <input
                     type="text"
-                    value={formData.CompanyCode}
-                    onChange={(e) => setFormData({ ...formData, CompanyCode: e.target.value })}
+                    value={formData.Code}
+                    onChange={(e) => setFormData({ ...formData, Code: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                     required
                   />
@@ -590,8 +590,8 @@ function CompaniesView() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">RIF</label>
                   <input
                     type="text"
-                    value={formData.TaxId}
-                    onChange={(e) => setFormData({ ...formData, TaxId: e.target.value })}
+                    value={formData.RIF}
+                    onChange={(e) => setFormData({ ...formData, RIF: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                     placeholder="J-12345678-9"
                     required
@@ -603,8 +603,8 @@ function CompaniesView() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Razón Social</label>
                 <input
                   type="text"
-                  value={formData.CompanyName}
-                  onChange={(e) => setFormData({ ...formData, CompanyName: e.target.value })}
+                  value={formData.LegalName}
+                  onChange={(e) => setFormData({ ...formData, LegalName: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                   required
                 />
@@ -613,8 +613,8 @@ function CompaniesView() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Dirección Fiscal</label>
                 <textarea
-                  value={formData.Address}
-                  onChange={(e) => setFormData({ ...formData, Address: e.target.value })}
+                  value={formData.FiscalAddress}
+                  onChange={(e) => setFormData({ ...formData, FiscalAddress: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                   rows={2}
                 />
@@ -645,8 +645,8 @@ function CompaniesView() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Moneda</label>
                   <select
-                    value={formData.Currency}
-                    onChange={(e) => setFormData({ ...formData, Currency: e.target.value })}
+                    value={formData.FunctionalCurrency}
+                    onChange={(e) => setFormData({ ...formData, FunctionalCurrency: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                   >
                     <option value="VES">VES - Bolívar</option>
@@ -676,10 +676,10 @@ function CompaniesView() {
                     <input
                       type="number"
                       step="0.1"
-                      value={formData.TaxConfig.ivaRate}
+                      value={formData.IVAAliquot}
                       onChange={(e) => setFormData({ 
                         ...formData, 
-                        TaxConfig: { ...formData.TaxConfig, ivaRate: parseFloat(e.target.value) } 
+                        IVAAliquot: parseFloat(e.target.value) 
                       })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                     />
@@ -689,10 +689,10 @@ function CompaniesView() {
                     <input
                       type="number"
                       step="0.1"
-                      value={formData.TaxConfig.igtfRate}
+                      value={formData.IGTFAliquot}
                       onChange={(e) => setFormData({ 
                         ...formData, 
-                        TaxConfig: { ...formData.TaxConfig, igtfRate: parseFloat(e.target.value) } 
+                        IGTFAliquot: parseFloat(e.target.value) 
                       })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                     />
