@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Fragment } from "react";
 
 type Module = "dashboard" | "companies" | "accounts" | "journal" | "thirdparties" | "periods" | "reports" | "users";
 
@@ -913,7 +913,11 @@ function AccountsView() {
             </button>
           </td>
         </tr>
-        {account.children?.map((child: any) => renderAccountRow(child, level + 1))}
+        {account.children?.map((child: any) => (
+          <Fragment key={child.AccountId}>
+            {renderAccountRow(child, level + 1)}
+          </Fragment>
+        ))}
       </>
     );
   };
