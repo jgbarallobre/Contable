@@ -162,7 +162,7 @@ GO
 -- 5. ASIGNAR USUARIO A EMPRESA
 -- ============================================================
 INSERT INTO UserCompanies (UserId, CompanyId, RoleId, IsDefault, IsActive, CreatedAt, CreatedBy)
-VALUES (1, 1, 2, 1, 1, GETDATE(), 1);  -- Usuario admin con rol Contador en empresa Demo
+VALUES (1, 1, 1, 1, 1, GETDATE(), 1);  -- Usuario admin con rol Administrador del Sistema
 GO
 
 -- ============================================================
