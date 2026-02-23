@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 type Module = "dashboard" | "companies" | "accounts" | "journal" | "thirdparties" | "periods" | "reports" | "users";
 
@@ -1161,6 +1161,131 @@ function AccountsView() {
 
 // ==================== JOURNAL VIEW ====================
 function JournalView() {
+  const [entries, setEntries] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({ total: 0, drafts: 0, approved: 0, annulled: 0 });
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [showModal, setShowModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedEntry, setSelectedEntry] = useState<any>(null);
+  const [formData, setFormData] = useState({
+    EntryType: "DAILY",
+    EntryDate: new Date().toISOString().split('T')[0],
+    Description: "",
+    Reference: "",
+    Lines: [{ AccountId: 0, Description: "", Debit: 0, Credit: 0 }]
+  });
+
+  const fetchEntries = useCallback(async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams();
+      params.append('page', page.toString());
+      params.append('pageSize', '20');
+      if (statusFilter) params.append('status', statusFilter);
+      
+      const res = await fetch(`/api/journal?${params}`);
+      const data = await res.json();
+      if (data.Success) {
+        setEntries(data.Data || []);
+        setTotalPages(data.TotalPages || 1);
+        // Calculate stats from the data
+        const entriesData = data.Data || [];
+        setStats({
+          total: data.Total || 0,
+          drafts: entriesData.filter((e: any) => e.Status === 'DRAFT').length,
+          approved: entriesData.filter((e: any) => e.Status === 'APPROVED').length,
+          annulled: entriesData.filter((e: any) => e.Status === 'ANNULED').length
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching entries:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [page, statusFilter]);
+
+  useEffect(() => {
+    fetchEntries();
+  }, [fetchEntries]);
+
+  const handleViewEntry = async (entry: any) => {
+    setSelectedEntry(entry);
+    setShowDetailModal(true);
+  };
+
+  const handleApprove = async (entryId: number) => {
+    if (!confirm("¿Aprobar este asiento?")) return;
+    try {
+      const res = await fetch(`/api/journal?action=approve&id=${entryId}`, { method: 'PUT' });
+      const data = await res.json();
+      if (data.Success) {
+        fetchEntries();
+      } else {
+        alert(data.Message || "Error al aprobar");
+      }
+    } catch (error) {
+      console.error("Error approving entry:", error);
+      alert("Error al aprobar el asiento");
+    }
+  };
+
+  const handleAnnul = async (entryId: number) => {
+    const reason = prompt("Motivo de anulación:");
+    if (!reason) return;
+    try {
+      const res = await fetch(`/api/journal?action=annul&id=${entryId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason })
+      });
+      const data = await res.json();
+      if (data.Success) {
+        fetchEntries();
+      } else {
+        alert(data.Message || "Error al anular");
+      }
+    } catch (error) {
+      console.error("Error annulling entry:", error);
+      alert("Error al anular el asiento");
+    }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
+  };
+
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return '-';
+    return new Date(dateStr).toLocaleDateString('es-VE');
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'DRAFT':
+        return <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs">Borrador</span>;
+      case 'APPROVED':
+        return <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">Aprobado</span>;
+      case 'ANNULED':
+        return <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs">Anulado</span>;
+      default:
+        return <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">{status}</span>;
+    }
+  };
+
+  const getEntryTypeLabel = (type: string) => {
+    switch (type) {
+      case 'DAILY': return 'Diario';
+      case 'INCOME': return 'Ingreso';
+      case 'EXPENSE': return 'Egreso';
+      case 'ADJUSTMENT': return 'Ajuste';
+      case 'CLOSING': return 'Cierre';
+      default: return type;
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -1168,58 +1293,156 @@ function JournalView() {
           <h2 className="text-2xl font-bold text-gray-800">Asientos Contables</h2>
           <p className="text-gray-500">Gestión de comprobantes contables</p>
         </div>
-        <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
+        <button 
+          onClick={() => setShowModal(true)}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+        >
           <span>+</span> Nuevo Asiento
         </button>
       </div>
       
+      {/* Filters */}
+      <div className="flex gap-4 items-center">
+        <select
+          value={statusFilter}
+          onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+          className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">Todos los estados</option>
+          <option value="DRAFT">Borrador</option>
+          <option value="APPROVED">Aprobado</option>
+          <option value="ANNULED">Anulado</option>
+        </select>
+      </div>
+
+      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-lg p-4 border border-gray-100">
           <p className="text-sm text-gray-500">Total Asientos</p>
-          <p className="text-2xl font-bold text-gray-800">156</p>
+          <p className="text-2xl font-bold text-gray-800">{stats.total}</p>
         </div>
         <div className="bg-white rounded-lg p-4 border border-gray-100">
           <p className="text-sm text-gray-500">Borrador</p>
-          <p className="text-2xl font-bold text-yellow-600">12</p>
+          <p className="text-2xl font-bold text-yellow-600">{stats.drafts}</p>
         </div>
         <div className="bg-white rounded-lg p-4 border border-gray-100">
           <p className="text-sm text-gray-500">Aprobados</p>
-          <p className="text-2xl font-bold text-green-600">140</p>
+          <p className="text-2xl font-bold text-green-600">{stats.approved}</p>
         </div>
         <div className="bg-white rounded-lg p-4 border border-gray-100">
           <p className="text-sm text-gray-500">Anulados</p>
-          <p className="text-2xl font-bold text-red-600">4</p>
+          <p className="text-2xl font-bold text-red-600">{stats.annulled}</p>
         </div>
       </div>
 
+      {/* Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="text-left py-3 px-4 font-semibold text-gray-600">Número</th>
-              <th className="text-left py-3 px-4 font-semibold text-gray-600">Fecha</th>
-              <th className="text-left py-3 px-4 font-semibold text-gray-600">Tipo</th>
-              <th className="text-left py-3 px-4 font-semibold text-gray-600">Descripción</th>
-              <th className="text-right py-3 px-4 font-semibold text-gray-600">Debe</th>
-              <th className="text-right py-3 px-4 font-semibold text-gray-600">Haber</th>
-              <th className="text-center py-3 px-4 font-semibold text-gray-600">Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr className="border-b border-gray-100 hover:bg-gray-50">
-              <td className="py-3 px-4">000125</td>
-              <td className="py-3 px-4">18/02/2024</td>
-              <td className="py-3 px-4">Egreso</td>
-              <td className="py-3 px-4">Pago servicios básicos</td>
-              <td className="py-3 px-4 text-right">125.500,00</td>
-              <td className="py-3 px-4 text-right">125.500,00</td>
-              <td className="py-3 px-4 text-center">
-                <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">Aprobado</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        {loading ? (
+          <div className="p-8 text-center text-gray-500">Cargando...</div>
+        ) : entries.length === 0 ? (
+          <div className="p-8 text-center text-gray-500">No hay asientos contables</div>
+        ) : (
+          <table className="w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="text-left py-3 px-4 font-semibold text-gray-600">Número</th>
+                <th className="text-left py-3 px-4 font-semibold text-gray-600">Fecha</th>
+                <th className="text-left py-3 px-4 font-semibold text-gray-600">Tipo</th>
+                <th className="text-left py-3 px-4 font-semibold text-gray-600">Descripción</th>
+                <th className="text-right py-3 px-4 font-semibold text-gray-600">Debe</th>
+                <th className="text-right py-3 px-4 font-semibold text-gray-600">Haber</th>
+                <th className="text-center py-3 px-4 font-semibold text-gray-600">Estado</th>
+                <th className="text-center py-3 px-4 font-semibold text-gray-600">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {entries.map((entry) => (
+                <tr key={entry.EntryId} className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="py-3 px-4 font-medium">{entry.EntryNumber}</td>
+                  <td className="py-3 px-4">{formatDate(entry.EntryDate)}</td>
+                  <td className="py-3 px-4">{getEntryTypeLabel(entry.EntryType)}</td>
+                  <td className="py-3 px-4">{entry.Description}</td>
+                  <td className="py-3 px-4 text-right">{formatCurrency(entry.TotalDebit)}</td>
+                  <td className="py-3 px-4 text-right">{formatCurrency(entry.TotalCredit)}</td>
+                  <td className="py-3 px-4 text-center">{getStatusBadge(entry.Status)}</td>
+                  <td className="py-3 px-4 text-center">
+                    <div className="flex justify-center gap-2">
+                      <button
+                        onClick={() => handleViewEntry(entry)}
+                        className="text-blue-600 hover:text-blue-800 text-sm"
+                      >
+                        Ver
+                      </button>
+                      {entry.Status === 'DRAFT' && (
+                        <>
+                          <button
+                            onClick={() => handleApprove(entry.EntryId)}
+                            className="text-green-600 hover:text-green-800 text-sm"
+                          >
+                            Aprobar
+                          </button>
+                          <button
+                            onClick={() => handleAnnul(entry.EntryId)}
+                            className="text-red-600 hover:text-red-800 text-sm"
+                          >
+                            Anular
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex justify-center gap-2">
+          <button
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="px-3 py-1 border rounded disabled:opacity-50"
+          >
+            Anterior
+          </button>
+          <span className="px-3 py-1">
+            Página {page} de {totalPages}
+          </span>
+          <button
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+            className="px-3 py-1 border rounded disabled:opacity-50"
+          >
+            Siguiente
+          </button>
+        </div>
+      )}
+
+      {/* Detail Modal */}
+      {showDetailModal && selectedEntry && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h3 className="text-xl font-bold">Asiento {selectedEntry.EntryNumber}</h3>
+                <p className="text-gray-500">{formatDate(selectedEntry.EntryDate)} - {getEntryTypeLabel(selectedEntry.EntryType)}</p>
+              </div>
+              <button onClick={() => setShowDetailModal(false)} className="text-gray-500 hover:text-gray-700">✕</button>
+            </div>
+            <p className="mb-4"><strong>Descripción:</strong> {selectedEntry.Description}</p>
+            <p className="mb-4"><strong>Referencia:</strong> {selectedEntry.Reference || '-'}</p>
+            <p className="mb-4"><strong>Estado:</strong> {getStatusBadge(selectedEntry.Status)}</p>
+            <div className="border-t pt-4 mt-4">
+              <p className="font-semibold mb-2">Totales:</p>
+              <p>Total Debe: {formatCurrency(selectedEntry.TotalDebit)}</p>
+              <p>Total Haber: {formatCurrency(selectedEntry.TotalCredit)}</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
