@@ -870,52 +870,62 @@ function AccountsView() {
     return roots;
   };
 
-  const renderAccountRow = (account: any, level: number = 0) => {
+  const renderAccountRow = (account: any, level: number = 0): React.ReactNode => {
     const indent = level * 4;
-    return (
-      <>
-        <tr key={account.AccountId} className="border-b border-gray-100 hover:bg-gray-50">
-          <td className="py-3 px-4">
-            <span style={{ marginLeft: `${indent}px` }} className="font-mono text-sm">
-              {account.AccountCode}
-            </span>
-          </td>
-          <td className="py-3 px-4">{account.AccountName}</td>
-          <td className="py-3 px-4">
-            <span className={`px-2 py-1 rounded-full text-xs ${
-              account.Nature === 'D' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'
-            }`}>
-              {account.Nature === 'D' ? 'D - Debe' : 'H - Haber'}
-            </span>
-          </td>
-          <td className="py-3 px-4 text-center">
-            <span className={`px-2 py-1 rounded-full text-xs ${account.AccountType === 'Rubro' ? 'bg-purple-100 text-purple-700' : account.AccountType === 'Subrubro' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}`}>
-              {account.AccountType}
-            </span>
-          </td>
-          <td className="py-3 px-4 text-center">
-            <span className={`px-2 py-1 rounded-full text-xs ${account.IsActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-              {account.IsActive ? 'Activa' : 'Inactiva'}
-            </span>
-          </td>
-          <td className="py-3 px-4 text-center">
-            <button 
-              onClick={() => handleEdit(account)}
-              className="text-blue-600 hover:text-blue-800 mr-2"
-            >
-              Editar
-            </button>
-            <button 
-              onClick={() => handleDelete(account.AccountId)}
-              className="text-red-600 hover:text-red-800"
-            >
-              Eliminar
-            </button>
-          </td>
-        </tr>
-        {account.children?.map((child: any) => renderAccountRow(child, level + 1))}
-      </>
-    );
+    const rows = [
+      <tr key={`${account.AccountId}-row`} className="border-b border-gray-100 hover:bg-gray-50">
+        <td className="py-3 px-4">
+          <span style={{ marginLeft: `${indent}px` }} className="font-mono text-sm">
+            {account.AccountCode}
+          </span>
+        </td>
+        <td className="py-3 px-4">{account.AccountName}</td>
+        <td className="py-3 px-4">
+          <span className={`px-2 py-1 rounded-full text-xs ${
+            account.Nature === 'D' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'
+          }`}>
+            {account.Nature === 'D' ? 'D - Debe' : 'H - Haber'}
+          </span>
+        </td>
+        <td className="py-3 px-4 text-center">
+          <span className={`px-2 py-1 rounded-full text-xs ${account.AccountType === 'Rubro' ? 'bg-purple-100 text-purple-700' : account.AccountType === 'Subrubro' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}`}>
+            {account.AccountType}
+          </span>
+        </td>
+        <td className="py-3 px-4 text-center">
+          <span className={`px-2 py-1 rounded-full text-xs ${account.IsActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+            {account.IsActive ? 'Activa' : 'Inactiva'}
+          </span>
+        </td>
+        <td className="py-3 px-4 text-center">
+          <button 
+            onClick={() => handleEdit(account)}
+            className="text-blue-600 hover:text-blue-800 mr-2"
+          >
+            Editar
+          </button>
+          <button 
+            onClick={() => handleDelete(account.AccountId)}
+            className="text-red-600 hover:text-red-800"
+          >
+            Eliminar
+          </button>
+        </td>
+      </tr>
+    ] as React.ReactNode[];
+    
+    if (account.children && account.children.length > 0) {
+      account.children.forEach((child: any) => {
+        const childResult = renderAccountRow(child, level + 1);
+        if (Array.isArray(childResult)) {
+          rows.push(...childResult);
+        } else {
+          rows.push(childResult);
+        }
+      });
+    }
+    
+    return rows;
   };
 
   if (loading) {
