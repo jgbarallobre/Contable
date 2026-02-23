@@ -1177,6 +1177,7 @@ function JournalView() {
   const [showAccountSearch, setShowAccountSearch] = useState(false);
   const [accountSearchQuery, setAccountSearchQuery] = useState("");
   const [accounts, setAccounts] = useState<any[]>([]);
+  const [selectedAccountIndex, setSelectedAccountIndex] = useState(0);
   const [activeLineIndex, setActiveLineIndex] = useState(0);
   const [activeField, setActiveField] = useState<'account' | 'description' | 'debit' | 'credit'>('account');
   
@@ -1313,6 +1314,7 @@ function JournalView() {
   const openAccountSearch = (lineIndex: number) => {
     setActiveLineIndex(lineIndex);
     setAccountSearchQuery("");
+    setSelectedAccountIndex(0);
     fetchAccounts();
     setShowAccountSearch(true);
   };
@@ -1408,9 +1410,14 @@ function JournalView() {
       openAccountSearch(lineIndex);
     }
     
-    // Escape: Close modal
+    // Escape: Close modals
     if (e.key === 'Escape') {
-      setShowModal(false);
+      if (showAccountSearch) {
+        setShowAccountSearch(false);
+        setAccountSearchQuery("");
+      } else {
+        setShowModal(false);
+      }
     }
   };
 
@@ -1887,12 +1894,32 @@ function JournalView() {
               <input
                 type="text"
                 value={accountSearchQuery}
-                onChange={(e) => setAccountSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setAccountSearchQuery(e.target.value);
+                  setSelectedAccountIndex(0);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    setShowAccountSearch(false);
+                    setAccountSearchQuery("");
+                  }
+                  if (e.key === 'Enter' && filteredAccounts.length > 0) {
+                    selectAccount(filteredAccounts[selectedAccountIndex]);
+                  }
+                  if (e.key === 'ArrowDown' && selectedAccountIndex < filteredAccounts.length - 1) {
+                    e.preventDefault();
+                    setSelectedAccountIndex(prev => prev + 1);
+                  }
+                  if (e.key === 'ArrowUp' && selectedAccountIndex > 0) {
+                    e.preventDefault();
+                    setSelectedAccountIndex(prev => prev - 1);
+                  }
+                }}
                 placeholder="Buscar por código o nombre..."
                 className="w-full mt-2 px-3 py-2 border border-gray-300 rounded-lg"
                 autoFocus
               />
-              <p className="text-xs text-gray-500 mt-1">Presiona Enter para seleccionar, Esc para cancelar</p>
+              <p className="text-xs text-gray-500 mt-1">Presiona Enter para seleccionar, ↑↓ para navegar, Esc para cancelar</p>
             </div>
             <div className="overflow-y-auto max-h-[60vh]">
               <table className="w-full text-sm">
@@ -1911,11 +1938,15 @@ function JournalView() {
                       </td>
                     </tr>
                   ) : (
-                    filteredAccounts.map((account) => (
+                    filteredAccounts.map((account, index) => (
                       <tr
                         key={account.AccountId}
                         onClick={() => selectAccount(account)}
-                        className="border-b border-gray-100 hover:bg-blue-50 cursor-pointer"
+                        className={`border-b border-gray-100 cursor-pointer ${
+                          index === selectedAccountIndex 
+                            ? 'bg-blue-100 ring-2 ring-blue-400 ring-inset' 
+                            : 'hover:bg-blue-50'
+                        }`}
                       >
                         <td className="py-2 px-4 font-mono text-blue-600">{account.Code}</td>
                         <td className="py-2 px-4">{account.Name}</td>
