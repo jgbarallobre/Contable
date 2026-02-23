@@ -172,7 +172,9 @@ export async function authenticateUser(
 export function hasPermission(authUser: AuthUser | null, module: string, action: string): boolean {
   if (!authUser) return false;
   if (authUser.Permissions.includes('*:*')) return true; // Super admin
-  return authUser.Permissions.includes(`${module}:${action}`);
+  // Case-insensitive comparison
+  const permission = `${module}:${action}`.toUpperCase();
+  return authUser.Permissions.some(p => p.toUpperCase() === permission);
 }
 
 export function hasAnyPermission(
