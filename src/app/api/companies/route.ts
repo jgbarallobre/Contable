@@ -3,7 +3,7 @@ import { getSession, hasPermission } from '@/lib/auth';
 import { query } from '@/lib/db/connection';
 import type { Company, CompanyCreate } from '@/lib/types';
 
-// GET - Listar empresas
+// GET - Listar empresas (todas las activas para admins, las propias para usuarios)
 export async function GET(request: NextRequest) {
   try {
     const session = await getSession();
@@ -11,15 +11,24 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ Success: false, Message: 'No autorizado' }, { status: 401 });
     }
 
-    // Obtener empresas del usuario
-    const companies = await query<Company>(
-      `SELECT c.* 
-       FROM Companies c
-       INNER JOIN UserCompanies uc ON c.CompanyId = uc.CompanyId
-       WHERE uc.UserId = @UserId AND uc.IsActive = 1 AND c.IsActive = 1
-       ORDER BY c.LegalName`,
-      { UserId: session.UserId }
-    );
+    let companies: Company[];
+    
+    // Si es admin (tiene permiso companies:* o companies:create), puede ver todas las empresas
+    if (hasPermission(session, 'companies', 'create') || session.Permissions.includes('*:*')) {
+      companies = await query<Company>(
+        `SELECT * FROM Companies WHERE IsActive = 1 ORDER BY LegalName`
+      );
+    } else {
+      // Usuarios normales solo ven las empresas asociadas
+      companies = await query<Company>(
+        `SELECT c.* 
+         FROM Companies c
+         INNER JOIN UserCompanies uc ON c.CompanyId = uc.CompanyId
+         WHERE uc.UserId = @UserId AND uc.IsActive = 1 AND c.IsActive = 1
+         ORDER BY c.LegalName`,
+        { UserId: session.UserId }
+      );
+    }
 
     return NextResponse.json({ Success: true, Data: companies });
   } catch (error) {
@@ -77,6 +86,17 @@ export async function POST(request: NextRequest) {
     );
 
     const companyId = result[0].CompanyId;
+
+    // Automatically add the creator to the company with full access
+    await query(
+      `INSERT INTO UserCompanies (UserId, CompanyId, Role, IsActive, CreatedBy)
+       VALUES (@UserId, @CompanyId, 'ADMIN', 1, @CreatedBy)`,
+      {
+        UserId: session.UserId,
+        CompanyId: companyId,
+        CreatedBy: session.UserId,
+      }
+    );
 
     // Crear períodos contables para el año actual
     const currentYear = new Date().getFullYear();
