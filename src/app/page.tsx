@@ -1171,6 +1171,7 @@ function JournalView() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const [searchFilter, setSearchFilter] = useState<string>("");
   const [showModal, setShowModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<any>(null);
@@ -1196,6 +1197,7 @@ function JournalView() {
       params.append('page', page.toString());
       params.append('pageSize', '20');
       if (statusFilter) params.append('status', statusFilter);
+      if (searchFilter) params.append('search', searchFilter);
       
       const res = await fetch(`/api/journal?${params}`);
       const data = await res.json();
@@ -1216,7 +1218,7 @@ function JournalView() {
     } finally {
       setLoading(false);
     }
-  }, [page, statusFilter]);
+  }, [page, statusFilter, searchFilter]);
 
   useEffect(() => {
     fetchEntries();
@@ -1508,7 +1510,14 @@ function JournalView() {
       </div>
       
       {/* Filters */}
-      <div className="flex gap-4 items-center">
+      <div className="flex gap-4 items-center flex-wrap">
+        <input
+          type="text"
+          placeholder="Buscar número, descripción o referencia..."
+          value={searchFilter}
+          onChange={(e) => { setSearchFilter(e.target.value); setPage(1); }}
+          className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 flex-1 min-w-[200px]"
+        />
         <select
           value={statusFilter}
           onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}

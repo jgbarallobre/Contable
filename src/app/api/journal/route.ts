@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
     const entryType = searchParams.get('type');
     const dateFrom = searchParams.get('dateFrom');
     const dateTo = searchParams.get('dateTo');
+    const search = searchParams.get('search'); // Búsqueda: número, descripción, referencia
     const page = parseInt(searchParams.get('page') || '1');
     const pageSize = parseInt(searchParams.get('pageSize') || '20');
 
@@ -53,6 +54,12 @@ export async function GET(request: NextRequest) {
     if (dateTo) {
       sql += ` AND h.EntryDate <= @DateTo`;
       params.DateTo = dateTo;
+    }
+
+    // Búsqueda por número, descripción o referencia
+    if (search) {
+      sql += ` AND (h.EntryNumber LIKE @Search OR h.Description LIKE @Search OR h.Reference LIKE @Search)`;
+      params.Search = `%${search}%`;
     }
 
     // Contar total
