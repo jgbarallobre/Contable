@@ -873,8 +873,8 @@ function AccountsView() {
   const renderAccountRow = (account: any, level: number = 0) => {
     const indent = level * 4;
     return (
-      <>
-        <tr key={account.AccountId} className="border-b border-gray-100 hover:bg-gray-50">
+      <Fragment key={account.AccountId}>
+      <tr className="border-b border-gray-100 hover:bg-gray-50">
           <td className="py-3 px-4">
             <span style={{ marginLeft: `${indent}px` }} className="font-mono text-sm">
               {account.AccountCode}
@@ -918,7 +918,7 @@ function AccountsView() {
             {renderAccountRow(child, level + 1)}
           </Fragment>
         ))}
-      </>
+      </Fragment>
     );
   };
 
