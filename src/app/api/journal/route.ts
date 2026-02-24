@@ -139,18 +139,38 @@ export async function POST(request: NextRequest) {
   try {
     const body: JournalEntryCreate = await request.json();
 
+    // Usar CompanyId del body o de la sesión
+    const companyId = body.CompanyId || session.CurrentCompanyId;
+    const periodId = body.PeriodId;
+
     // Validar datos requeridos
-    if (!body.CompanyId || !body.PeriodId || !body.EntryDate || !body.Description || !body.Lines?.length) {
+    if (!companyId || !body.EntryDate || !body.Description || !body.Lines?.length) {
       return NextResponse.json(
         { Success: false, Message: 'Datos incompletos' },
         { status: 400 }
       );
     }
 
+    // Obtener período del body o buscar el período abierto automáticamente
+    let finalPeriodId = periodId;
+    if (!finalPeriodId) {
+      const openPeriod = await queryOne<Period>(
+        `SELECT PeriodId FROM Periods WHERE CompanyId = @CompanyId AND Status = 'OPEN'`,
+        { CompanyId: companyId }
+      );
+      if (!openPeriod) {
+        return NextResponse.json(
+          { Success: false, Message: 'No hay un período contable abierto' },
+          { status: 400 }
+        );
+      }
+      finalPeriodId = openPeriod.PeriodId;
+    }
+
     // Verificar que el período esté abierto
     const period = await queryOne<Period>(
       `SELECT * FROM Periods WHERE PeriodId = @PeriodId AND Status = 'OPEN'`,
-      { PeriodId: body.PeriodId }
+      { PeriodId: finalPeriodId }
     );
 
     if (!period) {
@@ -164,7 +184,7 @@ export async function POST(request: NextRequest) {
     const seqResult = await query<{ CurrentNumber: number }>(
       `SELECT CurrentNumber FROM DocumentSequences 
        WHERE CompanyId = @CompanyId AND DocumentType = @EntryType`,
-      { CompanyId: body.CompanyId, EntryType: body.EntryType }
+      { CompanyId: companyId, EntryType: body.EntryType }
     );
 
     let entryNumber: string;
@@ -174,14 +194,14 @@ export async function POST(request: NextRequest) {
       
       await query(
         `UPDATE DocumentSequences SET CurrentNumber = @NewNumber WHERE CompanyId = @CompanyId AND DocumentType = @EntryType`,
-        { CompanyId: body.CompanyId, EntryType: body.EntryType, NewNumber: newNumber }
+        { CompanyId: companyId, EntryType: body.EntryType, NewNumber: newNumber }
       );
     } else {
       entryNumber = '000001';
       
       await query(
         `INSERT INTO DocumentSequences (CompanyId, DocumentType, CurrentNumber) VALUES (@CompanyId, @EntryType, 1)`,
-        { CompanyId: body.CompanyId, EntryType: body.EntryType }
+        { CompanyId: companyId, EntryType: body.EntryType }
       );
     }
 
@@ -203,8 +223,8 @@ export async function POST(request: NextRequest) {
     const result = await withTransaction(async (transaction) => {
       // Insertar encabezado
       const headerResult = await transaction.request()
-        .input('CompanyId', body.CompanyId)
-        .input('PeriodId', body.PeriodId)
+        .input('CompanyId', companyId)
+        .input('PeriodId', finalPeriodId)
         .input('EntryType', body.EntryType)
         .input('EntryNumber', entryNumber)
         .input('EntryDate', body.EntryDate)
